@@ -22,24 +22,27 @@ This add-on provides WhatsApp messaging for Home Assistant automations:
 
 ## Sending Messages
 
-Add a REST command to your `configuration.yaml`:
-
-```yaml
-rest_command:
-  send_whatsapp_message:
-    url: "http://a]_whatsapp_gateway:8099/api/notify/send"
-    method: POST
-    content_type: "application/json"
-    payload: '{"target": "{{ target }}", "message": "{{ message }}"}'
-```
+The add-on automatically registers a `notify.whatsapp` service with Home Assistant - no manual configuration needed!
 
 Use in automations:
 
 ```yaml
-- service: rest_command.send_whatsapp_message
+- service: notify.whatsapp
   data:
     target: "1234567890"
     message: "Hello from Home Assistant!"
+```
+
+Send with title and media:
+
+```yaml
+- service: notify.whatsapp
+  data:
+    target: "31612345678"
+    title: "Security Alert"
+    message: "Motion detected in the backyard"
+    data:
+      image: "http://192.168.1.10/camera/snapshot.jpg"
 ```
 
 ## Use Cases
