@@ -1,25 +1,49 @@
 /**
  * API client for the WhatsApp Gateway API backend
+ * 
+ * When running under HA Ingress, the UI is served in an iframe at:
+ *   /api/hassio_ingress/<ingress_key>/
+ * 
+ * We use window.location.pathname to get this base path and append
+ * API endpoints to it. This avoids CORS issues since everything stays
+ * on the same origin (homeassistant.local:8123).
  */
 
-// Get the base URL for API calls
-// The gateway runs on port 8099 and is exposed on the HA host
-function getApiBase(): string {
-  // Use the same hostname as the current page but on port 8099
-  return `${window.location.protocol}//${window.location.hostname}:8099`;
+// Get the ingress base path from the current URL
+// e.g., "/api/hassio_ingress/DZ8K07Vj8vcKugJlyvU7zIFTc9SwPzxgG0oic-6-DE4/"
+function getIngressBasePath(): string {
+  const path = window.location.pathname;
+  
+  // Ensure it ends with a slash
+  if (path.endsWith('/')) {
+    return path;
+  }
+  
+  // If path has segments (e.g., /api/hassio_ingress/key/some/ui/path),
+  // extract just the ingress base (first 3 segments + trailing slash)
+  const parts = path.split('/').filter(p => p);
+  if (parts.length >= 3 && parts[0] === 'api' && parts[1] === 'hassio_ingress') {
+    return `/${parts[0]}/${parts[1]}/${parts[2]}/`;
+  }
+  
+  // Fallback: use path as-is with trailing slash
+  return path + '/';
 }
 
-const API_BASE = getApiBase();
+const INGRESS_BASE = getIngressBasePath();
 
 async function fetchApi(endpoint: string, options: RequestInit = {}) {
-  const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+  // Remove leading slash from endpoint if present
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+  const url = `${INGRESS_BASE}${cleanEndpoint}`;
+  
   const response = await fetch(url, {
     ...options,
+    credentials: 'same-origin',
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
     },
-    // No timeout for long-running operations
   });
   
   if (!response.ok) {
