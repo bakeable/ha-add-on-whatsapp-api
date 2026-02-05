@@ -160,7 +160,7 @@ test_create_instance() {
     log_info "Testing: Create instance endpoint..."
     
     local instance_name="smoke_test_$(date +%s)"
-    local data='{"instanceName": "'"$instance_name"'", "qrcode": false}'
+    local data='{"instanceName": "'"$instance_name"'", "integration": "WHATSAPP-BAILEYS", "qrcode": false}'
     
     local response=$(http_request POST "/instance/create" "$data")
     local parsed=$(parse_response "$response")

@@ -8,7 +8,7 @@ build_from:
 
 # Build arguments passed to Dockerfile
 args:
-  EVOLUTION_VERSION: "2.1.1"
+  EVOLUTION_VERSION: "2.3.7"
   NODE_VERSION: "20"
 
 # Labels for the built image

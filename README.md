@@ -25,10 +25,12 @@ A Home Assistant add-on repository containing Evolution API for WhatsApp integra
 
 ### Evolution API
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.3.7-blue.svg)
 ![Arch](https://img.shields.io/badge/arch-aarch64%20%7C%20amd64%20%7C%20armv7-green.svg)
 
 WhatsApp API integration using [Evolution API](https://github.com/EvolutionAPI/evolution-api).
+
+**⚠️ Requires MariaDB database** - Install the official MariaDB add-on first.
 
 **Features:**
 - 📱 Connect WhatsApp via QR code (Baileys/WhatsApp Web protocol)
@@ -59,23 +61,28 @@ automation:
 
 ## Development
 
-### Local Testing
+### Local Testing with Docker Compose
 
-Use the Home Assistant devcontainer for local development:
+The easiest way to test locally is using Docker Compose:
 
 ```bash
 # Clone the repository
 git clone https://github.com/robinbakker/ha-add-on-whatsapp-api.git
 cd ha-add-on-whatsapp-api
 
-# Open in VS Code with devcontainer
-code .
+# Start Evolution API with PostgreSQL and Redis
+docker-compose up -d
+
+# Check logs
+docker-compose logs -f evolution-api
+
+# Access the Manager UI at http://localhost:8080/manager
 ```
 
 ### Running Tests
 
 ```bash
-# Smoke tests
+# Smoke tests (requires docker-compose running)
 ./tests/scripts/smoke.sh
 
 # API tests with Newman (Postman)

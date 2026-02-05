@@ -1,12 +1,8 @@
 # Evolution API Home Assistant Add-on
-# Pattern A: Install Evolution inside HA base image
+# Uses the official Evolution API Docker image as base
 
 ARG BUILD_FROM
-FROM ${BUILD_FROM}
-
-# Build arguments
-ARG EVOLUTION_VERSION="2.1.1"
-ARG NODE_VERSION="20"
+FROM evoapicloud/evolution-api:v2.3.7
 
 # Labels
 LABEL \
@@ -14,71 +10,35 @@ LABEL \
     io.hass.description="WhatsApp controller API for Home Assistant" \
     io.hass.arch="aarch64|armv7|amd64" \
     io.hass.type="addon" \
-    io.hass.version="${EVOLUTION_VERSION}" \
+    io.hass.version="2.3.7" \
     maintainer="Robin Bakker"
 
-# Environment defaults
-ENV \
-    LANG=C.UTF-8 \
-    NODE_ENV=production \
-    DOCKER_ENV=true
+# Install bashio for Home Assistant integration
+RUN apk add --no-cache \
+    curl \
+    jq \
+    bash
 
-# Install Node.js and required dependencies
-RUN \
-    apk add --no-cache \
-        nodejs \
-        npm \
-        git \
-        python3 \
-        make \
-        g++ \
-        chromium \
-        nss \
-        freetype \
-        harfbuzz \
-        ca-certificates \
-        ttf-freefont \
-        curl \
-        jq \
-        bash \
-    \
-    && apk add --no-cache --virtual .build-deps \
-        build-base \
-        linux-headers \
-    \
-    # Create app directory
-    && mkdir -p /app \
-    \
-    # Clone Evolution API
-    && git clone --depth 1 --branch v${EVOLUTION_VERSION} \
-        https://github.com/EvolutionAPI/evolution-api.git /app \
-    \
-    # Install dependencies
-    && cd /app \
-    && npm ci --only=production --ignore-scripts \
-    && npm run build 2>/dev/null || true \
-    \
-    # Cleanup
-    && apk del .build-deps \
-    && rm -rf \
-        /tmp/* \
-        /root/.npm \
-        /root/.cache \
-        /app/.git
-
-# Set working directory
-WORKDIR /app
+# Install bashio
+ARG BASHIO_VERSION="0.16.2"
+RUN curl -fsSL "https://github.com/hassio-addons/bashio/archive/v${BASHIO_VERSION}.tar.gz" \
+    | tar -xzf - --strip-components=1 -C /usr/local/lib/ bashio-${BASHIO_VERSION}/lib \
+    && ln -s /usr/local/lib/bashio.sh /usr/bin/bashio \
+    && ln -s /usr/local/lib/bashio.sh /usr/local/bin/bashio
 
 # Copy run script
 COPY run.sh /run.sh
 RUN chmod a+x /run.sh
 
+# Create data directories
+RUN mkdir -p /data/instances /data/store
+
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:8080/ || exit 1
 
 # Expose port
 EXPOSE 8080
 
-# Start
+# Start using run script
 CMD ["/run.sh"]

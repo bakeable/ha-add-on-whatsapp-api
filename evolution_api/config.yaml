@@ -1,70 +1,64 @@
-name: Evolution API
-slug: evolution_api
-description: WhatsApp controller API (Evolution API) as a Home Assistant add-on. Connect WhatsApp to your smart home automations.
-version: "0.1.0"
-url: https://github.com/robinbakker/ha-add-on-whatsapp-api
+# WhatsApp API Home Assistant Add-on Configuration
+name: WhatsApp API
+slug: whatsapp_api
+description: WhatsApp controller API (based on Evolution API) as a Home Assistant add-on. Connect WhatsApp to your smart home automations.
+version: "2.3.7"
+url: https://github.com/bakeable/ha-add-on-whatsapp-api
 
 # Supported architectures
 arch:
   - aarch64
   - armv7
   - amd64
-
+  
 # Add-on behavior
 startup: services
 boot: auto
 init: false
 
 # Network configuration
-ingress: false
+ingress: true
+ingress_port: 8080
 panel_icon: mdi:whatsapp
+panel_title: WhatsApp
 ports:
   8080/tcp: 8080
 ports_description:
   8080/tcp: Evolution API Web UI and REST API
 
-# Storage mappings
+# Storage mappings - persistent data for sessions
 map:
   - addon_config:rw
-  - addon_data:rw
 
 # User-configurable options
 options:
-  server_type: http
-  server_port: 8080
-  server_url: "http://homeassistant.local:8080"
-  global_apikey: ""
+  api_key: ""
+  webhook_url: ""
   log_level: "INFO"
-  database_enabled: true
-  database_provider: "postgresql"
-  database_connection_uri: ""
-  rabbitmq_enabled: false
-  rabbitmq_uri: ""
-  websocket_enabled: true
-  cors_origin: "*"
-  cors_methods: "GET,POST,PUT,DELETE"
-  cors_credentials: true
+  database_provider: "mysql"
+  database_host: "core-mariadb"
+  database_port: 3306
+  database_name: "evolution"
+  database_user: "evolution"
+  database_password: ""
+  redis_uri: ""
 
 # Schema for options validation
 schema:
-  server_type: list(http|https)
-  server_port: int
-  server_url: str
-  global_apikey: str?
+  api_key: str?
+  webhook_url: url?
   log_level: list(DEBUG|INFO|WARN|ERROR)
-  database_enabled: bool
-  database_provider: list(postgresql|mysql)?
-  database_connection_uri: str?
-  rabbitmq_enabled: bool
-  rabbitmq_uri: str?
-  websocket_enabled: bool
-  cors_origin: str
-  cors_methods: str
-  cors_credentials: bool
+  database_provider: list(mysql|postgresql)
+  database_host: str
+  database_port: int
+  database_name: str
+  database_user: str
+  database_password: password
+  redis_uri: str?
 
 # Watchdog for auto-restart on failure
 watchdog: http://[HOST]:[PORT:8080]/
 
-# Minimum Home Assistant version
+# API access
 homeassistant_api: true
 hassio_api: true
