@@ -162,25 +162,25 @@ export default function RulesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Rules</h2>
+        <h2 className="text-2xl font-semibold text-mushroom-text">Rules</h2>
         <div className="flex items-center space-x-2">
-          <div className="flex rounded-md shadow-sm">
+          <div className="flex rounded-mushroom overflow-hidden border border-mushroom-border">
             <button
               onClick={() => setView('yaml')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-l-md border ${
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                 view === 'yaml'
-                  ? 'bg-wa-dark text-white border-wa-dark'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  ? 'bg-primary text-white'
+                  : 'bg-mushroom-card text-mushroom-text-secondary hover:bg-mushroom-card-hover'
               }`}
             >
               📝 YAML Editor
             </button>
             <button
               onClick={() => setView('builder')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-r-md border-t border-b border-r ${
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                 view === 'builder'
-                  ? 'bg-wa-dark text-white border-wa-dark'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  ? 'bg-primary text-white'
+                  : 'bg-mushroom-card text-mushroom-text-secondary hover:bg-mushroom-card-hover'
               }`}
             >
               🔧 Guided Builder
@@ -202,27 +202,27 @@ export default function RulesPage() {
         <div className="space-y-4">
           {/* Validation Status */}
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-mushroom-text-secondary">
               {validating ? '⏳ Validating...' : 
                validationErrors.length === 0 ? '✅ Valid YAML' : 
                `❌ ${validationErrors.length} error(s)`}
             </span>
             {hasChanges && (
-              <span className="text-sm text-yellow-600">● Unsaved changes</span>
+              <span className="text-sm text-warning-text">● Unsaved changes</span>
             )}
           </div>
 
           {/* Validation Errors */}
           {validationErrors.length > 0 && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-              <h4 className="font-medium text-red-800 mb-2">Validation Errors:</h4>
-              <ul className="text-sm text-red-700 space-y-1">
+            <div className="p-4 bg-danger-muted border border-danger/30 rounded-mushroom">
+              <h4 className="font-medium text-danger-text mb-2">Validation Errors:</h4>
+              <ul className="text-sm text-danger-text/80 space-y-1">
                 {validationErrors.map((err, i) => (
                   <li key={i}>
-                    {err.path && <code className="bg-red-100 px-1 rounded">{err.path}</code>}
+                    {err.path && <code className="bg-danger/20 px-1 rounded">{err.path}</code>}
                     {err.path && ': '}
                     {err.message}
-                    {err.line && <span className="text-red-500"> (line {err.line})</span>}
+                    {err.line && <span className="text-danger-text/60"> (line {err.line})</span>}
                   </li>
                 ))}
               </ul>
@@ -236,7 +236,7 @@ export default function RulesPage() {
               defaultLanguage="yaml"
               value={yamlContent}
               onChange={(value) => setYamlContent(value || '')}
-              theme="vs"
+              theme="vs-dark"
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
@@ -250,7 +250,7 @@ export default function RulesPage() {
 
           {/* Test Panel */}
           <div className="card">
-            <h3 className="font-medium mb-3">🧪 Test Rules</h3>
+            <h3 className="font-medium text-mushroom-text mb-3">🧪 Test Rules</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
               <div>
                 <label className="label">Chat ID</label>
@@ -293,21 +293,21 @@ export default function RulesPage() {
             </button>
 
             {testResult && (
-              <div className="mt-3 p-3 bg-gray-50 rounded-md">
-                <h4 className="font-medium mb-2">
+              <div className="mt-3 p-4 bg-mushroom-bg-secondary rounded-mushroom">
+                <h4 className="font-medium text-mushroom-text mb-2">
                   {testResult.matched_rules.length > 0 ? '✅ Matched Rules:' : '❌ No rules matched'}
                 </h4>
                 {testResult.matched_rules.map((rule: any) => (
-                  <div key={rule.id} className="text-sm mb-2">
+                  <div key={rule.id} className="text-sm mb-2 text-mushroom-text">
                     <strong>{rule.name}</strong> ({rule.id})
-                    <span className="text-gray-500 ml-2">— {rule.reason}</span>
+                    <span className="text-mushroom-text-muted ml-2">— {rule.reason}</span>
                   </div>
                 ))}
                 {testResult.actions_preview.length > 0 && (
                   <>
-                    <h4 className="font-medium mt-3 mb-2">Actions that would execute:</h4>
+                    <h4 className="font-medium text-mushroom-text mt-3 mb-2">Actions that would execute:</h4>
                     {testResult.actions_preview.map((action: any, i: number) => (
-                      <div key={i} className="text-sm text-gray-600">
+                      <div key={i} className="text-sm text-mushroom-text-secondary">
                         • {action.details}
                       </div>
                     ))}
@@ -437,7 +437,7 @@ function GuidedBuilder({
       {/* Form */}
       <div className="space-y-4">
         <div className="card">
-          <h3 className="font-medium mb-3">Basic Info</h3>
+          <h3 className="font-medium text-mushroom-text mb-3">Basic Info</h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Rule ID *</label>
@@ -479,19 +479,21 @@ function GuidedBuilder({
             </div>
           </div>
           <div className="flex items-center space-x-4 mt-3">
-            <label className="flex items-center space-x-2">
+            <label className="flex items-center space-x-2 text-mushroom-text-secondary">
               <input
                 type="checkbox"
                 checked={rule.enabled}
                 onChange={(e) => setRule({ ...rule, enabled: e.target.checked })}
+                className="rounded bg-mushroom-bg border-mushroom-border text-primary focus:ring-primary/30"
               />
               <span>Enabled</span>
             </label>
-            <label className="flex items-center space-x-2">
+            <label className="flex items-center space-x-2 text-mushroom-text-secondary">
               <input
                 type="checkbox"
                 checked={rule.stop_on_match}
                 onChange={(e) => setRule({ ...rule, stop_on_match: e.target.checked })}
+                className="rounded bg-mushroom-bg border-mushroom-border text-primary focus:ring-primary/30"
               />
               <span>Stop on match</span>
             </label>
@@ -499,7 +501,7 @@ function GuidedBuilder({
         </div>
 
         <div className="card">
-          <h3 className="font-medium mb-3">Match Conditions</h3>
+          <h3 className="font-medium text-mushroom-text mb-3">Match Conditions</h3>
           <div className="space-y-3">
             <div>
               <label className="label">Chat Type</label>
@@ -551,10 +553,10 @@ function GuidedBuilder({
                 {(rule.match.text?.contains || []).map((kw, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center px-2 py-1 bg-wa-light text-wa-dark rounded-full text-sm"
+                    className="inline-flex items-center px-2 py-1 bg-whatsapp-muted text-whatsapp rounded-full text-sm"
                   >
                     {kw}
-                    <button onClick={() => removeContains(i)} className="ml-1 hover:text-red-600">×</button>
+                    <button onClick={() => removeContains(i)} className="ml-1 hover:text-danger-text">×</button>
                   </span>
                 ))}
               </div>
@@ -563,15 +565,15 @@ function GuidedBuilder({
         </div>
 
         <div className="card">
-          <h3 className="font-medium mb-3">Actions *</h3>
+          <h3 className="font-medium text-mushroom-text mb-3">Actions *</h3>
           <div className="space-y-3">
             {rule.actions.map((action, i) => (
-              <div key={i} className="p-3 bg-gray-50 rounded-md">
+              <div key={i} className="p-3 bg-mushroom-bg-secondary rounded-mushroom">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium">
+                  <span className="font-medium text-mushroom-text">
                     {action.type === 'ha_service' ? '🏠 HA Service' : '💬 WhatsApp Reply'}
                   </span>
-                  <button onClick={() => removeAction(i)} className="text-red-500 hover:text-red-700">
+                  <button onClick={() => removeAction(i)} className="text-danger-text hover:text-danger">
                     Remove
                   </button>
                 </div>
@@ -620,8 +622,8 @@ function GuidedBuilder({
       {/* Preview */}
       <div>
         <div className="card sticky top-4">
-          <h3 className="font-medium mb-3">YAML Preview</h3>
-          <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-x-auto text-sm">
+          <h3 className="font-medium text-mushroom-text mb-3">YAML Preview</h3>
+          <pre className="bg-mushroom-bg p-4 rounded-mushroom overflow-x-auto text-sm text-mushroom-text-secondary border border-mushroom-border">
             {preview}
           </pre>
         </div>

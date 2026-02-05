@@ -116,7 +116,7 @@ export default function SetupPage() {
       disconnected: "status-disconnected",
       connecting: "status-connecting",
       qr: "status-connecting",
-      unknown: "bg-gray-100 text-gray-800",
+      unknown: "bg-mushroom-card text-mushroom-text-muted",
     };
     return (
       <span
@@ -130,21 +130,21 @@ export default function SetupPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Setup</h2>
+      <h2 className="text-2xl font-semibold text-mushroom-text">Setup</h2>
 
       {/* Connection Status */}
       <div className="card">
-        <h3 className="text-lg font-medium mb-4">Connection Status</h3>
+        <h3 className="text-lg font-medium text-mushroom-text mb-4">Connection Status</h3>
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center space-x-2">
-            <span className="text-gray-600">WhatsApp:</span>
+            <span className="text-mushroom-text-secondary">WhatsApp:</span>
             <StatusBadge status={status.whatsapp} label={status.whatsapp} />
             {status.phone && (
-              <span className="text-sm text-gray-500">({status.phone})</span>
+              <span className="text-sm text-mushroom-text-muted">({status.phone})</span>
             )}
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-gray-600">Home Assistant:</span>
+            <span className="text-mushroom-text-secondary">Home Assistant:</span>
             <StatusBadge status={status.ha} label={status.ha} />
           </div>
         </div>
@@ -155,26 +155,26 @@ export default function SetupPage() {
 
       {/* WhatsApp Connection */}
       <div className="card">
-        <h3 className="text-lg font-medium mb-4">WhatsApp Connection</h3>
+        <h3 className="text-lg font-medium text-mushroom-text mb-4">WhatsApp Connection</h3>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+          <div className="mb-4 p-4 bg-danger-muted border border-danger/30 text-danger-text rounded-mushroom">
             {error}
           </div>
         )}
 
         {qrCode ? (
           <div className="space-y-4">
-            <p className="text-gray-600">
+            <p className="text-mushroom-text-secondary">
               Scan this QR code with WhatsApp on your phone:
             </p>
-            <ol className="text-sm text-gray-500 list-decimal list-inside space-y-1">
+            <ol className="text-sm text-mushroom-text-muted list-decimal list-inside space-y-1">
               <li>Open WhatsApp on your phone</li>
               <li>Go to Settings → Linked Devices</li>
               <li>Tap "Link a Device"</li>
               <li>Scan the QR code below</li>
             </ol>
-            <div className="flex justify-center p-4 bg-white border rounded-lg">
+            <div className="qr-container mx-auto">
               {qrType === "base64" ? (
                 <img
                   src={qrCode}
@@ -185,7 +185,7 @@ export default function SetupPage() {
                 <QRCodeSVG value={qrCode} size={280} />
               )}
             </div>
-            <p className="text-sm text-gray-500 text-center">
+            <p className="text-sm text-mushroom-text-muted text-center animate-pulse-soft">
               Waiting for connection... (polling every 2 seconds)
             </p>
             <button
@@ -197,9 +197,9 @@ export default function SetupPage() {
           </div>
         ) : status.whatsapp === "connected" ? (
           <div className="space-y-4">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-700 font-medium">✓ WhatsApp Connected</p>
-              <p className="text-green-600 text-sm">
+            <div className="p-4 bg-success-muted border border-success/30 rounded-mushroom">
+              <p className="text-success-text font-medium">✓ WhatsApp Connected</p>
+              <p className="text-success-text/80 text-sm">
                 {status.phone ? `Connected as ${status.phone}` : "Instance is connected and ready."}
               </p>
             </div>
@@ -223,19 +223,19 @@ export default function SetupPage() {
       </div>
 
       {/* Instructions */}
-      <div className="card bg-blue-50 border-blue-200">
-        <h3 className="text-lg font-medium text-blue-800 mb-2">Quick Start</h3>
-        <ol className="text-blue-700 list-decimal list-inside space-y-2">
+      <div className="card bg-info-muted border-info/30">
+        <h3 className="text-lg font-medium text-info-text mb-2">Quick Start</h3>
+        <ol className="text-info-text/80 list-decimal list-inside space-y-2">
           <li>Connect your WhatsApp by scanning the QR code above</li>
           <li>
-            Go to the <strong>Chats</strong> tab to see and enable
+            Go to the <strong className="text-info-text">Chats</strong> tab to see and enable
             groups/contacts
           </li>
           <li>
-            Create rules in the <strong>Rules</strong> tab to automate actions
+            Create rules in the <strong className="text-info-text">Rules</strong> tab to automate actions
           </li>
           <li>
-            Monitor activity in the <strong>Logs</strong> tab
+            Monitor activity in the <strong className="text-info-text">Logs</strong> tab
           </li>
         </ol>
       </div>

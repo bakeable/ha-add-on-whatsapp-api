@@ -119,13 +119,14 @@ export default function LogsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Logs</h2>
+        <h2 className="text-2xl font-semibold text-mushroom-text">Logs</h2>
         <div className="flex items-center space-x-4">
-          <label className="flex items-center space-x-2 text-sm">
+          <label className="flex items-center space-x-2 text-sm text-mushroom-text-secondary">
             <input
               type="checkbox"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="rounded bg-mushroom-bg border-mushroom-border text-primary focus:ring-primary/30"
             />
             <span>Auto-refresh (5s)</span>
           </label>
@@ -140,24 +141,24 @@ export default function LogsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-mushroom-border">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setTab('messages')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
               tab === 'messages'
-                ? 'border-wa-dark text-wa-dark'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-mushroom-text-secondary hover:text-mushroom-text hover:border-mushroom-accent'
             }`}
           >
             📨 Messages
           </button>
           <button
             onClick={() => setTab('rules')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
               tab === 'rules'
-                ? 'border-wa-dark text-wa-dark'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-mushroom-text-secondary hover:text-mushroom-text hover:border-mushroom-accent'
             }`}
           >
             ⚡ Rule Executions
@@ -182,9 +183,9 @@ export default function LogsPage() {
 
       {/* Empty State */}
       {!loading && ((tab === 'messages' && messages.length === 0) || (tab === 'rules' && ruleFires.length === 0)) && (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-mushroom-text-muted">
           <div className="text-4xl mb-3">📭</div>
-          <p>No {tab === 'messages' ? 'messages' : 'rule executions'} yet.</p>
+          <p className="text-mushroom-text-secondary">No {tab === 'messages' ? 'messages' : 'rule executions'} yet.</p>
           <p className="text-sm mt-1">
             {tab === 'messages'
               ? 'Send a message to your WhatsApp account to see it here.'
@@ -198,61 +199,61 @@ export default function LogsPage() {
 
 function MessagesTable({ messages, formatDate }: { messages: Message[]; formatDate: (d: string) => string }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+    <div className="overflow-x-auto card p-0">
+      <table className="min-w-full divide-y divide-mushroom-border">
+        <thead className="bg-mushroom-bg-secondary">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase tracking-wider">
               Time
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase tracking-wider">
               Chat
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase tracking-wider">
               Sender
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase tracking-wider">
               Message
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase tracking-wider">
               Status
             </th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="divide-y divide-mushroom-border">
           {messages.map((msg) => (
-            <tr key={msg.id} className={msg.is_from_me ? 'bg-blue-50' : ''}>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+            <tr key={msg.id} className={`transition-colors ${msg.is_from_me ? 'bg-info-muted' : 'hover:bg-mushroom-card-hover'}`}>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-mushroom-text-muted">
                 {formatDate(msg.received_at)}
               </td>
               <td className="px-4 py-3 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">{msg.chat_name || msg.chat_id}</div>
-                <div className="text-xs text-gray-500 truncate max-w-[150px]">{msg.chat_id}</div>
+                <div className="text-sm font-medium text-mushroom-text">{msg.chat_name || msg.chat_id}</div>
+                <div className="text-xs text-mushroom-text-muted truncate max-w-[150px]">{msg.chat_id}</div>
               </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-mushroom-text">
                 {msg.is_from_me ? (
-                  <span className="text-blue-600">You</span>
+                  <span className="text-info-text">You</span>
                 ) : (
                   <span>{msg.sender_id}</span>
                 )}
               </td>
               <td className="px-4 py-3">
-                <div className="text-sm text-gray-900 max-w-md truncate" title={msg.content}>
+                <div className="text-sm text-mushroom-text max-w-md truncate" title={msg.content}>
                   {msg.message_type !== 'text' && (
-                    <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs mr-2">
+                    <span className="inline-block px-2 py-0.5 bg-mushroom-bg text-mushroom-text-secondary rounded text-xs mr-2">
                       {msg.message_type}
                     </span>
                   )}
-                  {msg.content || <span className="text-gray-400 italic">(no text)</span>}
+                  {msg.content || <span className="text-mushroom-text-muted italic">(no text)</span>}
                 </div>
               </td>
               <td className="px-4 py-3 whitespace-nowrap">
                 {msg.processed ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <span className="status-badge status-connected">
                     ✓ Processed
                   </span>
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                  <span className="status-badge bg-mushroom-bg text-mushroom-text-secondary">
                     Received
                   </span>
                 )}
@@ -267,63 +268,63 @@ function MessagesTable({ messages, formatDate }: { messages: Message[]; formatDa
 
 function RuleFiresTable({ ruleFires, formatDate }: { ruleFires: RuleFire[]; formatDate: (d: string) => string }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+    <div className="overflow-x-auto card p-0">
+      <table className="min-w-full divide-y divide-mushroom-border">
+        <thead className="bg-mushroom-bg-secondary">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase tracking-wider">
               Time
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase tracking-wider">
               Rule
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase tracking-wider">
               Action
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase tracking-wider">
               Details
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase tracking-wider">
               Status
             </th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="divide-y divide-mushroom-border">
           {ruleFires.map((fire) => (
-            <tr key={fire.id} className={fire.success ? '' : 'bg-red-50'}>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+            <tr key={fire.id} className={`transition-colors ${fire.success ? 'hover:bg-mushroom-card-hover' : 'bg-danger-muted'}`}>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-mushroom-text-muted">
                 {formatDate(fire.fired_at)}
               </td>
               <td className="px-4 py-3 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">{fire.rule_name}</div>
-                <div className="text-xs text-gray-500">{fire.rule_id}</div>
+                <div className="text-sm font-medium text-mushroom-text">{fire.rule_name}</div>
+                <div className="text-xs text-mushroom-text-muted">{fire.rule_id}</div>
               </td>
               <td className="px-4 py-3 whitespace-nowrap">
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                <span className={`status-badge ${
                   fire.action_type === 'ha_service' 
-                    ? 'bg-ha-blue text-white' 
-                    : 'bg-wa-light text-wa-dark'
+                    ? 'bg-info-muted text-info-text' 
+                    : 'bg-whatsapp-muted text-whatsapp'
                 }`}>
                   {fire.action_type === 'ha_service' ? '🏠 HA Service' : '💬 Reply'}
                 </span>
               </td>
               <td className="px-4 py-3">
-                <div className="text-sm text-gray-900 max-w-md truncate" title={fire.action_details}>
+                <div className="text-sm text-mushroom-text max-w-md truncate" title={fire.action_details}>
                   {fire.action_details}
                 </div>
               </td>
               <td className="px-4 py-3 whitespace-nowrap">
                 {fire.success ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <span className="status-badge status-connected">
                     ✓ Success
                   </span>
                 ) : (
                   <div>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    <span className="status-badge status-disconnected">
                       ✗ Failed
                     </span>
                     {fire.error_message && (
-                      <div className="text-xs text-red-600 mt-1 max-w-xs truncate" title={fire.error_message}>
+                      <div className="text-xs text-danger-text mt-1 max-w-xs truncate" title={fire.error_message}>
                         {fire.error_message}
                       </div>
                     )}

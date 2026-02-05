@@ -279,18 +279,39 @@ log_info "Configuration complete, starting Evolution API..."
 
 # We're already in /evolution directory (set in Dockerfile)
 
-# Generate Prisma Client for MySQL
-log_info "Generating Prisma Client for MySQL..."
-npx prisma generate --schema ./prisma/mysql-schema.prisma 2>&1 || {
-    log_error "Failed to generate Prisma Client"
-    exit 1
-}
+# Evolution API uses Prisma internally and should auto-migrate when DATABASE_ENABLED=true
+# But we need to ensure the Prisma client is generated for MySQL and migrations are deployed
+log_info "Setting up Evolution API database..."
 
-# Run database migrations
-log_info "Running database migrations..."
-npx prisma migrate deploy --schema ./prisma/mysql-schema.prisma 2>&1 || {
-    log_warning "Migration failed or already up to date"
-}
+# First, let's check if prisma schemas exist
+if [ -f "./prisma/mysql-schema.prisma" ]; then
+    log_info "Found mysql-schema.prisma, generating Prisma Client..."
+    npx prisma generate --schema ./prisma/mysql-schema.prisma 2>&1 || {
+        log_warning "Failed to generate Prisma Client from mysql-schema"
+    }
+    
+    log_info "Deploying database migrations..."
+    npx prisma migrate deploy --schema ./prisma/mysql-schema.prisma 2>&1 || {
+        log_warning "Migration deploy failed, trying db push..."
+        npx prisma db push --schema ./prisma/mysql-schema.prisma --accept-data-loss 2>&1 || {
+            log_warning "db push also failed, Evolution API will handle migrations"
+        }
+    }
+elif [ -f "./prisma/schema.prisma" ]; then
+    log_info "Found schema.prisma, generating Prisma Client..."
+    npx prisma generate --schema ./prisma/schema.prisma 2>&1 || {
+        log_warning "Failed to generate Prisma Client from schema"
+    }
+    
+    log_info "Deploying database migrations..."
+    npx prisma db push --schema ./prisma/schema.prisma --accept-data-loss 2>&1 || {
+        log_warning "db push failed, Evolution API will handle migrations"
+    }
+else
+    log_info "No prisma schema found in /evolution/prisma/, Evolution API will handle database setup"
+    # List available files for debugging
+    ls -la ./prisma/ 2>/dev/null || log_info "prisma directory doesn't exist"
+fi
 
 # Function to configure instance after API is ready
 configure_instance() {

@@ -147,13 +147,13 @@ export default function ChatsPage() {
   );
 
   if (loading) {
-    return <div className="text-center py-8">Loading chats...</div>;
+    return <div className="text-center py-8 text-mushroom-text-secondary">Loading chats...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Chats</h2>
+        <h2 className="text-2xl font-semibold text-mushroom-text">Chats</h2>
         <div className="flex gap-2">
           <button
             onClick={() => {
@@ -175,31 +175,31 @@ export default function ChatsPage() {
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+        <div className="p-4 bg-danger-muted border border-danger/30 text-danger-text rounded-mushroom">
           {error}
         </div>
       )}
 
       {/* Debug Info Panel */}
       {showDebug && (
-        <div className="card bg-gray-50">
+        <div className="card bg-mushroom-bg-secondary">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-medium text-gray-900">
+            <h3 className="font-medium text-mushroom-text">
               🔧 Evolution API Debug
             </h3>
             <button
               onClick={runDebug}
-              className="text-sm text-blue-600 hover:text-blue-800"
+              className="text-sm text-primary hover:text-primary-hover"
             >
               🔄 Refresh
             </button>
           </div>
           {debugInfo ? (
-            <pre className="text-xs bg-white p-3 rounded border overflow-auto max-h-96">
+            <pre className="text-xs bg-mushroom-bg p-3 rounded-mushroom border border-mushroom-border text-mushroom-text-secondary overflow-auto max-h-96">
               {JSON.stringify(debugInfo, null, 2)}
             </pre>
           ) : (
-            <p className="text-gray-500">Loading debug info...</p>
+            <p className="text-mushroom-text-muted">Loading debug info...</p>
           )}
         </div>
       )}
@@ -209,7 +209,7 @@ export default function ChatsPage() {
         <div className="card">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-medium text-gray-900">
+              <h3 className="font-medium text-mushroom-text">
                 {syncProgress.status === "complete"
                   ? "✅ Sync Complete"
                   : syncProgress.status === "error"
@@ -217,7 +217,7 @@ export default function ChatsPage() {
                     : "🔄 Syncing Chats..."}
               </h3>
               {syncProgress.status === "complete" && (
-                <span className="text-sm text-green-600">
+                <span className="text-sm text-success-text">
                   {syncProgress.totalCount} chats synced
                 </span>
               )}
@@ -227,9 +227,9 @@ export default function ChatsPage() {
             {syncProgress.status !== "complete" &&
               syncProgress.status !== "error" && (
                 <div className="space-y-2">
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div className="w-full bg-mushroom-bg rounded-full h-2">
                     <div
-                      className="bg-wa-green h-2.5 rounded-full transition-all duration-500"
+                      className="bg-whatsapp h-2 rounded-full transition-all duration-500"
                       style={{
                         width:
                           syncProgress.status === "fetching_groups"
@@ -242,7 +242,7 @@ export default function ChatsPage() {
                       }}
                     ></div>
                   </div>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-mushroom-text-secondary">
                     {syncProgress.currentStep}
                   </p>
                 </div>
@@ -251,7 +251,7 @@ export default function ChatsPage() {
             {/* Stats */}
             {(syncProgress.groupsCount > 0 ||
               syncProgress.contactsCount > 0) && (
-              <div className="flex gap-4 text-sm text-gray-600">
+              <div className="flex gap-4 text-sm text-mushroom-text-secondary">
                 {syncProgress.groupsCount > 0 && (
                   <span>👥 {syncProgress.groupsCount} groups</span>
                 )}
@@ -262,7 +262,7 @@ export default function ChatsPage() {
             )}
 
             {syncProgress.status === "error" && syncProgress.error && (
-              <p className="text-sm text-red-600">{syncProgress.error}</p>
+              <p className="text-sm text-danger-text">{syncProgress.error}</p>
             )}
           </div>
         </div>
@@ -281,7 +281,7 @@ export default function ChatsPage() {
             />
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-gray-600">Type:</span>
+            <span className="text-mushroom-text-secondary">Type:</span>
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value as any)}
@@ -296,34 +296,34 @@ export default function ChatsPage() {
       </div>
 
       {/* Chats Table */}
-      <div className="card overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="card overflow-hidden p-0">
+        <table className="min-w-full divide-y divide-mushroom-border">
+          <thead className="bg-mushroom-bg-secondary">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase">
                 Enabled
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase">
                 Type
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase">
                 Name
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase">
                 Chat ID
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase">
                 Last Message
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-mushroom-text-muted uppercase">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="divide-y divide-mushroom-border">
             {filteredChats.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-mushroom-text-muted">
                   {chats.length === 0
                     ? 'No chats found. Click "Sync from WhatsApp" to load your chats.'
                     : "No chats match your search."}
@@ -333,43 +333,43 @@ export default function ChatsPage() {
               filteredChats.map((chat) => (
                 <tr
                   key={chat.chat_id}
-                  className={!chat.enabled ? "bg-gray-50" : ""}
+                  className={`transition-colors ${!chat.enabled ? "opacity-60" : "hover:bg-mushroom-card-hover"}`}
                 >
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
                       checked={chat.enabled}
                       onChange={() => handleToggle(chat)}
-                      className="h-4 w-4 text-wa-green rounded"
+                      className="h-4 w-4 rounded bg-mushroom-bg border-mushroom-border text-whatsapp focus:ring-whatsapp/30"
                     />
                   </td>
                   <td className="px-4 py-3">
                     <span
                       className={`status-badge ${
                         chat.type === "group"
-                          ? "bg-purple-100 text-purple-800"
-                          : "bg-blue-100 text-blue-800"
+                          ? "bg-purple-500/15 text-purple-400"
+                          : "bg-info-muted text-info-text"
                       }`}
                     >
                       {chat.type === "group" ? "👥 Group" : "👤 Direct"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-medium">
+                  <td className="px-4 py-3 font-medium text-mushroom-text">
                     <div>{chat.name}</div>
                     {chat.type === "direct" && chat.phone_number && (
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-mushroom-text-muted">
                         +{chat.phone_number}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 font-mono">
+                  <td className="px-4 py-3 text-sm text-mushroom-text-muted font-mono">
                     {chat.type === "direct" && chat.phone_number
                       ? chat.phone_number
                       : chat.chat_id.length > 30
                         ? `${chat.chat_id.substring(0, 30)}...`
                         : chat.chat_id}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
+                  <td className="px-4 py-3 text-sm text-mushroom-text-muted">
                     {chat.last_message_at
                       ? new Date(chat.last_message_at).toLocaleString()
                       : "-"}
@@ -377,7 +377,7 @@ export default function ChatsPage() {
                   <td className="px-4 py-3">
                     <a
                       href={`/rules?chat=${encodeURIComponent(chat.chat_id)}`}
-                      className="text-ha-primary hover:text-ha-secondary text-sm"
+                      className="text-primary hover:text-primary-hover text-sm"
                     >
                       Create Rule →
                     </a>
@@ -389,7 +389,7 @@ export default function ChatsPage() {
         </table>
       </div>
 
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-mushroom-text-muted">
         💡 Enable chats to allow rules to process messages from them. Only
         enabled chats will trigger automations.
       </p>

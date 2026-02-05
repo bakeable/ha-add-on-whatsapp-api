@@ -81,20 +81,20 @@ export default function TestPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Test Messages</h2>
+        <h2 className="text-2xl font-semibold text-mushroom-text">Test Messages</h2>
       </div>
 
-      <p className="text-gray-600">
+      <p className="text-mushroom-text-secondary">
         Send test messages to verify your WhatsApp connection is working
         properly.
       </p>
 
       {result && (
         <div
-          className={`p-4 rounded-md ${
+          className={`p-4 rounded-mushroom ${
             result.success
-              ? "bg-green-50 border border-green-200 text-green-800"
-              : "bg-red-50 border border-red-200 text-red-800"
+              ? "bg-success-muted border border-success/30 text-success-text"
+              : "bg-danger-muted border border-danger/30 text-danger-text"
           }`}
         >
           {result.message}
@@ -103,9 +103,9 @@ export default function TestPage() {
 
       {/* Recipient Input */}
       <div className="card">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">📱 Recipient</h3>
+        <h3 className="text-lg font-medium text-mushroom-text mb-4">📱 Recipient</h3>
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="label">
             Phone Number or Chat ID
           </label>
           <input
@@ -115,7 +115,7 @@ export default function TestPage() {
             placeholder="e.g., 1234567890 or 1234567890@s.whatsapp.net"
             className="input"
           />
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-mushroom-text-muted">
             Enter a phone number (without + or spaces) or a full WhatsApp ID.
             For groups, use the group ID ending in @g.us
           </p>
@@ -124,12 +124,12 @@ export default function TestPage() {
 
       {/* Text Message Form */}
       <div className="card">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">
+        <h3 className="text-lg font-medium text-mushroom-text mb-4">
           💬 Send Text Message
         </h3>
         <form onSubmit={handleSendText} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="label">
               Message
             </label>
             <textarea
@@ -152,12 +152,12 @@ export default function TestPage() {
 
       {/* Media Message Form */}
       <div className="card">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">
+        <h3 className="text-lg font-medium text-mushroom-text mb-4">
           📎 Send Media
         </h3>
         <form onSubmit={handleSendMedia} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="label">
               Media Type
             </label>
             <select
@@ -172,7 +172,7 @@ export default function TestPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="label">
               Media URL
             </label>
             <input
@@ -182,7 +182,7 @@ export default function TestPage() {
               placeholder="https://example.com/image.jpg"
               className="input"
             />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-mushroom-text-muted mt-1">
               Enter a publicly accessible URL to the media file.
             </p>
           </div>
@@ -197,9 +197,9 @@ export default function TestPage() {
       </div>
 
       {/* Help Section */}
-      <div className="card bg-blue-50 border-blue-200">
-        <h3 className="text-lg font-medium text-blue-900 mb-2">💡 Tips</h3>
-        <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+      <div className="card bg-info-muted border-info/30">
+        <h3 className="text-lg font-medium text-info-text mb-2">💡 Tips</h3>
+        <ul className="text-sm text-info-text/80 space-y-1 list-disc list-inside">
           <li>
             Phone numbers should include country code (e.g., 31612345678 for
             Netherlands)

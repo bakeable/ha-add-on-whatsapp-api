@@ -69,13 +69,15 @@ export class EvolutionClient {
       console.error(`[Evolution] Create instance error:`, {
         status: error.response?.status,
         statusText: error.response?.statusText,
-        data: error.response?.data,
+        data: JSON.stringify(error.response?.data),
         message: error.message,
       });
       
       // Handle "already exists" error (can be 400 or 500 depending on Evolution API version)
       const errorData = error.response?.data;
-      const message = errorData?.response?.message || errorData?.message || '';
+      // Message can be a string or an array
+      let rawMessage = errorData?.response?.message || errorData?.message || '';
+      const message = Array.isArray(rawMessage) ? rawMessage.join(' ') : String(rawMessage);
       console.log(`[Evolution] Error message: "${message}"`);
       
       if (message.toLowerCase().includes('already') || message.toLowerCase().includes('exist')) {

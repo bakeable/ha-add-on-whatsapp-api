@@ -15,31 +15,36 @@ function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-ha-background">
-      {/* Header */}
-      <header className="bg-wa-dark text-white shadow-lg">
+    <div className="min-h-screen bg-mushroom-bg">
+      {/* Header - Mushroom style */}
+      <header className="bg-mushroom-card border-b border-mushroom-border">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center space-x-3">
-            <span className="text-2xl">📱</span>
-            <h1 className="text-xl font-semibold">WhatsApp Gateway API</h1>
+            <div className="w-10 h-10 rounded-mushroom bg-whatsapp-muted flex items-center justify-center">
+              <span className="text-xl">📱</span>
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-mushroom-text">WhatsApp Gateway</h1>
+              <p className="text-xs text-mushroom-text-muted">Home Assistant Add-on</p>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b">
+      {/* Navigation - Mushroom pill style */}
+      <nav className="bg-mushroom-bg-secondary border-b border-mushroom-border">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex space-x-1">
+          <div className="flex space-x-2 py-3 overflow-x-auto">
             {tabs.map((tab) => (
               <NavLink
                 key={tab.path}
                 to={tab.path}
                 end={tab.path === "/"}
                 className={({ isActive }) =>
-                  `px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  `flex items-center px-4 py-2 rounded-mushroom text-sm font-medium transition-all whitespace-nowrap ${
                     isActive
-                      ? "border-wa-dark text-wa-dark"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      ? "bg-primary-muted text-primary border border-primary/30"
+                      : "text-mushroom-text-secondary hover:bg-mushroom-card hover:text-mushroom-text"
                   }`
                 }
               >
