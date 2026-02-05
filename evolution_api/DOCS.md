@@ -77,13 +77,13 @@ automation:
 
 ### Message Format
 
-| Parameter       | Required | Description                                                                                     |
-| --------------- | -------- | ----------------------------------------------------------------------------------------------- |
-| `target`        | Yes      | Phone number (e.g., `1234567890`) or WhatsApp ID (e.g., `1234567890@s.whatsapp.net`)            |
-| `message`       | Yes      | The message text to send                                                                        |
-| `title`         | No       | Optional title (displayed in **bold** at the top)                                               |
-| `data.image`    | No       | URL of an image to send                                                                         |
-| `data.document` | No       | URL of a document to send                                                                       |
+| Parameter       | Required | Description                                                                          |
+| --------------- | -------- | ------------------------------------------------------------------------------------ |
+| `target`        | Yes      | Phone number (e.g., `1234567890`) or WhatsApp ID (e.g., `1234567890@s.whatsapp.net`) |
+| `message`       | Yes      | The message text to send                                                             |
+| `title`         | No       | Optional title (displayed in **bold** at the top)                                    |
+| `data.image`    | No       | URL of an image to send                                                              |
+| `data.document` | No       | URL of a document to send                                                            |
 
 ### Phone Number Format
 

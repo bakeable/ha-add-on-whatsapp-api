@@ -269,9 +269,6 @@ export function createWaRoutes(evolutionClient: EvolutionClient, db: DatabasePoo
           refreshProgress.status = 'saving';
           refreshProgress.currentStep = 'Saving to database...';
           
-          // Mark sync start time to clean stale records later
-          const syncStartTime = new Date().toISOString();
-          
           // Deduplicate: prefer groups over direct, merge by ID
           const chatMap = new Map<string, Chat>();
           for (const chat of [...groups, ...contacts]) {
@@ -290,8 +287,28 @@ export function createWaRoutes(evolutionClient: EvolutionClient, db: DatabasePoo
           const allChats: Chat[] = Array.from(chatMap.values());
           refreshProgress.totalCount = allChats.length;
           
-          // Insert/update chats using transaction
+          // Collect all chat IDs that we're syncing
+          const syncedIds = allChats.map(c => c.id);
+          
+          // Insert/update chats and clean stale records in a single transaction
+          let deletedCount = 0;
           await db.transaction(async (conn) => {
+            // First, delete records that are NOT in the sync list and have invalid formats
+            // or records that simply don't exist in the current sync
+            if (syncedIds.length > 0) {
+              // Build placeholders for IN clause
+              const placeholders = syncedIds.map(() => '?').join(',');
+              
+              // Delete records not in current sync, or with invalid ID format
+              const [deleteResult] = await conn.execute(`
+                DELETE FROM wa_chat 
+                WHERE id NOT IN (${placeholders})
+                OR (id NOT LIKE '%@s.whatsapp.net' AND id NOT LIKE '%@g.us' AND id NOT LIKE '%@c.us')
+              `, syncedIds);
+              deletedCount = (deleteResult as any).affectedRows || 0;
+            }
+            
+            // Then insert/update all chats
             for (const chat of allChats) {
               await conn.execute(`
                 INSERT INTO wa_chat (id, type, name, phone_number, last_message_at, updated_at)
@@ -310,15 +327,6 @@ export function createWaRoutes(evolutionClient: EvolutionClient, db: DatabasePoo
               ]);
             }
           });
-          
-          // Clean up stale records that weren't updated during this sync
-          // Only delete records with old IDs that don't have valid WhatsApp format
-          const deleteResult = await db.run(`
-            DELETE FROM wa_chat 
-            WHERE updated_at < ? 
-            OR (id NOT LIKE '%@s.whatsapp.net' AND id NOT LIKE '%@g.us' AND id NOT LIKE '%@c.us')
-          `, [syncStartTime]);
-          const deletedCount = deleteResult.affectedRows;
           if (deletedCount > 0) {
             console.log(`[WA] Cleaned up ${deletedCount} stale/invalid chat records`);
           }

@@ -357,7 +357,9 @@ export default function ChatsPage() {
                   <td className="px-4 py-3 font-medium">
                     <div>{chat.name}</div>
                     {chat.type === "direct" && chat.phone_number && (
-                      <div className="text-xs text-gray-400">+{chat.phone_number}</div>
+                      <div className="text-xs text-gray-400">
+                        +{chat.phone_number}
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 font-mono">

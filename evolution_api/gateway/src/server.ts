@@ -4,7 +4,7 @@ import path from 'path';
 import { EvolutionClient } from './clients/evolution';
 import { HAClient } from './clients/ha';
 import { loadConfig } from './config';
-import { DatabasePool, initDatabase } from './db/init';
+import { initDatabase } from './db/init';
 import { RuleEngine } from './engine/rule-engine';
 import { createHaRoutes } from './routes/ha';
 import { createLogsRoutes } from './routes/logs';
