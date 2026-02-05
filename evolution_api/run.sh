@@ -86,7 +86,14 @@ if [ "$IN_HA" = true ]; then
     
     if [ -z "$DB_PASS" ]; then
         log_error "Database password is required!"
-        log_error "Please configure 'database_password' in add-on settings"
+        log_error "Please configure the following in add-on settings:"
+        log_error "  - database_host (e.g., 'core-mariadb' for MariaDB add-on)"
+        log_error "  - database_port (usually 3306 for MariaDB)"
+        log_error "  - database_name (e.g., 'evolution')"
+        log_error "  - database_user (e.g., 'homeassistant')"
+        log_error "  - database_password (must match your MariaDB configuration)"
+        log_error ""
+        log_error "Make sure you have installed the MariaDB add-on and created the database first!"
         exit 1
     fi
     

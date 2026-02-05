@@ -1,5 +1,21 @@
 # WhatsApp Gateway API Add-on Documentation
 
+## Quick Start
+
+**Before you begin**, make sure you have:
+
+1. ✅ **MariaDB add-on installed and running** ([Install from Add-on Store](https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_mariadb))
+2. ✅ **Created a database** named `evolution` in MariaDB
+3. ✅ **Noted your MariaDB credentials** (username and password)
+
+Then:
+
+1. Install this add-on
+2. Configure database settings (see Configuration section)
+3. Start the add-on
+4. Open the Web UI from the sidebar
+5. Scan QR code with your phone
+
 ## Overview
 
 This add-on provides **WhatsApp messaging integration** for Home Assistant using [Evolution API](https://github.com/EvolutionAPI/evolution-api). It includes:
