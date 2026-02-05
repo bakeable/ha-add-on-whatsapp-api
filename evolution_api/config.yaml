@@ -17,14 +17,17 @@ boot: auto
 init: false
 
 # Network configuration
+# The gateway UI (ingress) runs on port 8099
 ingress: true
-ingress_port: 8080
+ingress_port: 8099
 panel_icon: mdi:whatsapp
 panel_title: WhatsApp
 ports:
   8080/tcp: 8080
+  8099/tcp: 8099
 ports_description:
-  8080/tcp: Evolution API Web UI and REST API
+  8080/tcp: Evolution API REST API (internal)
+  8099/tcp: WhatsApp Gateway UI
 
 # Storage mappings - persistent data for sessions
 map:
@@ -50,6 +53,8 @@ options:
   always_online: false
   read_messages: false
   read_status: false
+  # Gateway settings
+  allowed_services: "script.turn_on,automation.trigger"
 
 # Schema for options validation
 schema:
@@ -71,6 +76,8 @@ schema:
   always_online: bool
   read_messages: bool
   read_status: bool
+  # Gateway settings
+  allowed_services: str
 
 # Watchdog for auto-restart on failure
 watchdog: http://[HOST]:[PORT:8080]/

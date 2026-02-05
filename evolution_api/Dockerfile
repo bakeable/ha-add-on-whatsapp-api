@@ -13,11 +13,14 @@ LABEL \
     io.hass.version="2.3.7" \
     maintainer="Robin Bakker"
 
-# Install bashio for Home Assistant integration
+# Install bashio for Home Assistant integration, plus build tools for gateway
 RUN apk add --no-cache \
     curl \
     jq \
-    bash
+    bash \
+    python3 \
+    make \
+    g++
 
 # Install bashio
 ARG BASHIO_VERSION="0.16.2"
@@ -25,6 +28,23 @@ RUN curl -fsSL "https://github.com/hassio-addons/bashio/archive/v${BASHIO_VERSIO
     | tar -xzf - --strip-components=1 -C /usr/local/lib/ bashio-${BASHIO_VERSION}/lib \
     && ln -s /usr/local/lib/bashio.sh /usr/bin/bashio \
     && ln -s /usr/local/lib/bashio.sh /usr/local/bin/bashio
+
+# Copy and build the gateway
+COPY gateway /gateway
+WORKDIR /gateway
+
+# Install backend dependencies and build
+RUN npm ci && npm run build
+
+# Install and build UI
+WORKDIR /gateway/ui
+RUN npm ci && npm run build
+
+# Move UI build to gateway public folder
+RUN mkdir -p /gateway/public && mv /gateway/ui/dist/* /gateway/public/
+
+# Go back to root
+WORKDIR /
 
 # Copy run script
 COPY run.sh /run.sh
@@ -37,8 +57,8 @@ RUN mkdir -p /data/instances /data/store
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:8080/ || exit 1
 
-# Expose port
-EXPOSE 8080
+# Expose ports (8080 for Evolution API, 8099 for Gateway)
+EXPOSE 8080 8099
 
 # Start using run script
 CMD ["/run.sh"]

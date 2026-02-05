@@ -80,6 +80,35 @@ docker-compose logs -f evolution-api
 # Access the Manager UI at http://localhost:8080/manager
 ```
 
+## Development & Local Testing
+
+### Quick Local Testing in Home Assistant
+
+To test changes quickly in your actual Home Assistant:
+
+1. **Setup (one-time):**
+
+   ```bash
+   # Copy environment template
+   cp .env.example .env
+
+   # Edit .env with your HA details
+   nano .env
+   ```
+
+2. **Sync to HA:**
+
+   ```bash
+   ./sync-to-ha.sh
+   ```
+
+3. **In Home Assistant:**
+   - Go to **Settings** → **Add-ons**
+   - Find **WhatsApp Gateway** under "Local add-ons"
+   - Click **Rebuild** → **Restart**
+
+See [LOCAL_ADDON_SETUP.md](LOCAL_ADDON_SETUP.md) for detailed instructions.
+
 ### Running Tests
 
 ```bash

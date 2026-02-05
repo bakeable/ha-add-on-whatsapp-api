@@ -31,9 +31,7 @@ services:
 
   evolution-api:
     container_name: evolution_api
-    build:
-      context: ./evolution_api
-      dockerfile: Dockerfile
+    image: evoapicloud/evolution-api:v2.3.7
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -86,8 +84,33 @@ services:
       redis:
         condition: service_healthy
 
+  # WhatsApp Gateway - Node.js backend + React UI
+  gateway:
+    container_name: whatsapp_gateway
+    build:
+      context: ./evolution_api
+      dockerfile: Dockerfile.gateway
+    restart: unless-stopped
+    ports:
+      - "8099:8099"
+    environment:
+      # Gateway config
+      GATEWAY_PORT: 8099
+      EVOLUTION_URL: http://evolution-api:8080
+      EVOLUTION_API_KEY: test-api-key-change-me
+      INSTANCE_NAME: Home
+      # Mock HA for local dev (use http://host.docker.internal:8123 for real HA)
+      HA_URL: http://gateway:8099/mock-ha
+      HA_TOKEN: mock-token
+      DATA_PATH: /data/gateway
+    volumes:
+      - gateway_data:/data/gateway
+    depends_on:
+      - evolution-api
+
 volumes:
   mariadb_data:
   redis_data:
   evolution_instances:
   evolution_data:
+  gateway_data:

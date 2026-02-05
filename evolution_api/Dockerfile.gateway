@@ -1,0 +1,38 @@
+# Gateway-only Dockerfile for local development
+FROM node:20-alpine
+
+# Install build dependencies for better-sqlite3
+RUN apk add --no-cache python3 make g++
+
+# Copy gateway source
+WORKDIR /gateway
+COPY gateway/package*.json ./
+RUN npm ci
+
+COPY gateway/tsconfig.json ./
+COPY gateway/src ./src
+
+# Build backend
+RUN npm run build
+
+# Copy and build UI
+WORKDIR /gateway/ui
+COPY gateway/ui/package*.json ./
+RUN npm ci
+
+COPY gateway/ui ./
+RUN npm run build
+
+# Move UI build to public folder
+RUN mkdir -p /gateway/public && mv dist/* /gateway/public/
+
+WORKDIR /gateway
+
+# Create data directory
+RUN mkdir -p /data/gateway
+
+# Expose gateway port
+EXPOSE 8099
+
+# Start gateway
+CMD ["node", "dist/server.js"]

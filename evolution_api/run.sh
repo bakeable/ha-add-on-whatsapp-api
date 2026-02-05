@@ -178,6 +178,9 @@ if [ "$IN_HA" = true ]; then
     export ALWAYS_ONLINE=$(bashio::config 'always_online')
     export READ_MESSAGES=$(bashio::config 'read_messages')
     export READ_STATUS=$(bashio::config 'read_status')
+    
+    # Gateway-specific settings
+    export HA_ALLOWED_SERVICES=$(bashio::config 'allowed_services')
 else
     export INSTANCE_NAME="${INSTANCE_NAME:-Home}"
     export SYNC_FULL_HISTORY="${SYNC_FULL_HISTORY:-true}"
@@ -186,6 +189,7 @@ else
     export ALWAYS_ONLINE="${ALWAYS_ONLINE:-false}"
     export READ_MESSAGES="${READ_MESSAGES:-false}"
     export READ_STATUS="${READ_STATUS:-false}"
+    export HA_ALLOWED_SERVICES="${HA_ALLOWED_SERVICES:-script.turn_on,automation.trigger}"
 fi
 
 log_info "Instance name: ${INSTANCE_NAME}"
@@ -246,6 +250,22 @@ configure_instance() {
                     \"syncFullHistory\": ${SYNC_FULL_HISTORY}
                 }" > /dev/null
             
+            # Configure webhook to point to the gateway
+            log_info "Configuring webhook to gateway..."
+            curl -s -X POST "http://localhost:${SERVER_PORT}/webhook/set/${INSTANCE_NAME}" \
+                -H "Content-Type: application/json" \
+                -H "apikey: ${AUTHENTICATION_API_KEY}" \
+                -d "{
+                    \"enabled\": true,
+                    \"url\": \"http://localhost:8099/webhook/evolution\",
+                    \"webhookByEvents\": true,
+                    \"events\": [
+                        \"MESSAGES_UPSERT\",
+                        \"CONNECTION_UPDATE\",
+                        \"QRCODE_UPDATED\"
+                    ]
+                }" > /dev/null
+            
             log_info "Instance '${INSTANCE_NAME}' configured successfully"
             return 0
         fi
@@ -259,8 +279,34 @@ log_info "Starting Evolution API on port ${SERVER_PORT}..."
 node dist/main.js &
 API_PID=$!
 
+# Start the Gateway
+log_info "Starting WhatsApp Gateway on port 8099..."
+export GATEWAY_PORT=8099
+export EVOLUTION_URL="http://localhost:${SERVER_PORT}"
+export EVOLUTION_API_KEY="${AUTHENTICATION_API_KEY}"
+export DATA_PATH="/data"
+export HA_URL="http://supervisor/core"
+export HA_TOKEN="${SUPERVISOR_TOKEN}"
+export HA_ALLOWED_SERVICES="${HA_ALLOWED_SERVICES}"
+export INSTANCE_NAME="${INSTANCE_NAME}"
+
+cd /gateway
+node dist/server.js &
+GATEWAY_PID=$!
+cd /evolution
+
 # Configure instance in background
 (configure_instance) &
 
-# Wait for the API process
-wait $API_PID
+# Function to handle shutdown
+shutdown() {
+    log_info "Shutting down..."
+    kill $API_PID $GATEWAY_PID 2>/dev/null || true
+    wait $API_PID $GATEWAY_PID 2>/dev/null || true
+    exit 0
+}
+
+trap shutdown SIGTERM SIGINT
+
+# Wait for either process to exit
+wait $API_PID $GATEWAY_PID

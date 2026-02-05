@@ -2,7 +2,12 @@
 
 ## Overview
 
-This add-on runs [Evolution API](https://github.com/EvolutionAPI/evolution-api) as a Home Assistant add-on, allowing you to integrate WhatsApp messaging into your smart home automations.
+This add-on runs [Evolution API](https://github.com/EvolutionAPI/evolution-api) as a Home Assistant add-on with a custom **WhatsApp Gateway UI** that lets you:
+
+- **Connect WhatsApp** by scanning a QR code right from the Home Assistant interface
+- **Discover chats** and enable/disable which ones can trigger automations
+- **Create rules** using YAML (Home Assistant-style) to trigger HA scripts/automations from WhatsApp messages
+- **View logs** of received messages and rule executions
 
 Evolution API uses the **Baileys** library (WhatsApp Web protocol), so it works by linking your WhatsApp account as a "Linked Device" - similar to using WhatsApp Web.
 
@@ -53,26 +58,27 @@ If you have an existing MySQL/MariaDB server on your network, you can use that i
 
 ### Optional Options
 
-| Option        | Description                                      | Default   |
-| ------------- | ------------------------------------------------ | --------- |
-| `api_key`     | API authentication key (auto-generated if empty) | _(empty)_ |
-| `instance_name` | Name for the WhatsApp instance                 | `Home`    |
-| `webhook_url` | Global webhook URL for all events                | _(empty)_ |
-| `redis_uri`   | Redis connection for caching (optional)          | _(empty)_ |
-| `log_level`   | Logging verbosity                                | `INFO`    |
+| Option             | Description                                              | Default                             |
+| ------------------ | -------------------------------------------------------- | ----------------------------------- |
+| `api_key`          | API authentication key (auto-generated if empty)         | _(empty)_                           |
+| `instance_name`    | Name for the WhatsApp instance                           | `Home`                              |
+| `webhook_url`      | Global webhook URL for all events                        | _(empty)_                           |
+| `redis_uri`        | Redis connection for caching (optional)                  | _(empty)_                           |
+| `log_level`        | Logging verbosity                                        | `INFO`                              |
+| `allowed_services` | Comma-separated list of HA services the gateway can call | `script.turn_on,automation.trigger` |
 
 ### Instance Settings
 
 These settings are automatically applied to the WhatsApp instance:
 
-| Option              | Description                                      | Default |
-| ------------------- | ------------------------------------------------ | ------- |
-| `sync_full_history` | Sync all chat history when connecting            | `true`  |
-| `reject_calls`      | Auto-reject incoming calls                       | `false` |
-| `groups_ignore`     | Ignore messages from groups                      | `false` |
-| `always_online`     | Show as always online in WhatsApp                | `false` |
-| `read_messages`     | Auto-mark messages as read                       | `false` |
-| `read_status`       | Auto-view status updates                         | `false` |
+| Option              | Description                           | Default |
+| ------------------- | ------------------------------------- | ------- |
+| `sync_full_history` | Sync all chat history when connecting | `true`  |
+| `reject_calls`      | Auto-reject incoming calls            | `false` |
+| `groups_ignore`     | Ignore messages from groups           | `false` |
+| `always_online`     | Show as always online in WhatsApp     | `false` |
+| `read_messages`     | Auto-mark messages as read            | `false` |
+| `read_status`       | Auto-view status updates              | `false` |
 
 ### Example Configuration
 
@@ -85,7 +91,6 @@ database_port: 3306
 database_name: evolution
 database_user: evolution
 database_password: "your-secure-password"
-webhook_url: "http://homeassistant.local:8123/api/webhook/whatsapp_incoming"
 log_level: INFO
 # Instance settings
 sync_full_history: true
@@ -94,6 +99,8 @@ groups_ignore: false
 always_online: false
 read_messages: false
 read_status: false
+# Gateway settings
+allowed_services: "script.turn_on,automation.trigger"
 ```
 
 ### MariaDB Add-on Setup
@@ -119,22 +126,136 @@ read_status: false
 
 After installation and configuration, start the add-on. The first start may take a minute as database migrations run.
 
-Open the Web UI (via the sidebar "WhatsApp" panel or add-on page).
+Open the Web UI by clicking **WhatsApp** in your Home Assistant sidebar (or from the add-on page).
 
-### Step 2: Create an Instance
+### Step 2: Connect WhatsApp
 
-1. In the Evolution API Manager UI, click **Add Instance**
-2. Enter an instance name (e.g., `Home`)
-3. Set Integration to "WhatsApp Baileys"
-4. Click **Create**
+1. In the **Setup** tab, you'll see a QR code
+2. On your phone, open WhatsApp → **Settings** → **Linked Devices**
+3. Tap **Link a Device** and scan the QR code
+4. Wait for the connection to establish
+5. The status will change to "Connected" with your phone number
 
-### Step 3: Link Your WhatsApp
+### Step 3: Discover Chats
 
-1. In the Manager UI, click on your instance
-2. Click **Connect** to generate a QR code
-3. On your phone, open WhatsApp → **Settings** → **Linked Devices**
-4. Tap **Link a Device** and scan the QR code
-5. Wait for the connection to establish
+1. Go to the **Chats** tab
+2. Click **Refresh Chats** to load your conversations
+3. Enable the chats you want to use for automations by toggling them on
+4. Only enabled chats will be available for rule matching
+
+### Step 4: Create Rules
+
+1. Go to the **Rules** tab
+2. Use the **YAML Editor** or **Guided Builder** to create rules
+3. Rules follow a Home Assistant-style YAML format
+
+Example rule that triggers a goodnight script:
+
+```yaml
+version: 1
+rules:
+  - id: goodnight_routine
+    name: Goodnight Routine
+    enabled: true
+    priority: 100
+    match:
+      chat:
+        type: direct # Only from direct messages, not groups
+      text:
+        contains:
+          - "goodnight"
+          - "welterusten"
+    actions:
+      - type: ha_service
+        service: script.turn_on
+        target:
+          entity_id: script.goodnight
+      - type: reply_whatsapp
+        text: "✅ Goodnight routine started!"
+    cooldown_seconds: 60 # Prevent multiple triggers within 60 seconds
+```
+
+### Step 5: Test and Monitor
+
+1. Send a test message matching your rule
+2. Go to the **Logs** tab to see:
+   - **Messages** - All received WhatsApp messages
+   - **Rule Executions** - Which rules fired and whether they succeeded
+
+## Rules Reference
+
+### Rule Structure
+
+```yaml
+version: 1
+rules:
+  - id: unique_rule_id # Required: unique identifier
+    name: Human Readable Name # Required: display name
+    enabled: true # Optional: default true
+    priority: 100 # Optional: higher = evaluated first
+    stop_on_match: true # Optional: stop processing more rules if matched
+
+    match:
+      chat:
+        type: direct|group|any # Optional: filter by chat type
+        ids: # Optional: specific chat IDs
+          - "1234567890@s.whatsapp.net"
+      sender:
+        ids: # Optional: specific sender phone numbers
+          - "1234567890"
+      text:
+        contains: # Optional: text must contain any of these
+          - "keyword1"
+          - "keyword2"
+        starts_with: "prefix" # Optional: text must start with this
+        regex: "pattern.*" # Optional: regex pattern match
+
+    actions:
+      - type: ha_service # Call a Home Assistant service
+        service: script.turn_on # Service to call (must be in allowed_services)
+        target:
+          entity_id: script.my_script
+        data: # Optional: additional service data
+          message: "Hello"
+
+      - type: reply_whatsapp # Send a WhatsApp reply
+        text: "Message received!"
+
+    cooldown_seconds: 30 # Optional: minimum seconds between triggers
+```
+
+### Match Conditions
+
+All match conditions are optional. A rule matches if ALL specified conditions are met:
+
+- **chat.type**: `direct` (1:1 chats), `group`, or `any`
+- **chat.ids**: List of specific chat JIDs to match
+- **sender.ids**: List of phone numbers (without country code prefix like +)
+- **text.contains**: Message must contain at least one of these keywords (case-insensitive)
+- **text.starts_with**: Message must start with this prefix
+- **text.regex**: Message must match this regular expression
+
+### Available Actions
+
+1. **ha_service**: Call a Home Assistant service
+   - Only services in the `allowed_services` config option can be called
+   - Default: `script.turn_on,automation.trigger`
+   - Use templates in `data` fields (planned for future)
+
+2. **reply_whatsapp**: Send a WhatsApp message back to the chat
+   - The reply is sent to the same chat that triggered the rule
+
+### Security
+
+The gateway restricts which Home Assistant services can be called. Configure `allowed_services` in the add-on options to control this:
+
+```yaml
+allowed_services: "script.turn_on,automation.trigger,notify.mobile_app_phone"
+```
+
+## Legacy: Manual Webhook Integration
+
+If you prefer to handle webhooks yourself instead of using the built-in rules, you can still configure a global webhook URL:
 
 ### Step 4: Configure Webhook for Home Assistant
 
