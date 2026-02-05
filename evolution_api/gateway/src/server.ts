@@ -85,9 +85,6 @@ async function main(): Promise<void> {
   });
 
   // Initialize database (async)
-  });
-
-  // Initialize database (async)
   const db = await initDatabase({
     host: config.dbHost,
     port: config.dbPort,
