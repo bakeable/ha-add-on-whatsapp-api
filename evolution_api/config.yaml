@@ -32,7 +32,7 @@ panel_title: WhatsApp
 
 # Exposed ports
 ports:
-  8080/tcp: null
+  8080/tcp: 8080
   8099/tcp: 8099
 ports_description:
   8080/tcp: Evolution API REST API (internal)
