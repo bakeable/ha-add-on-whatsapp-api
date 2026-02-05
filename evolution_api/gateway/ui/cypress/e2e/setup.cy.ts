@@ -63,7 +63,7 @@ describe('Setup Page', () => {
 
     it('shows connected message', () => {
       cy.contains('WhatsApp Connected').should('be.visible')
-      cy.contains('Instance "Home" is connected').should('be.visible')
+      cy.contains('Instance "HomeAssistant" is connected').should('be.visible')
     })
 
     it('shows Disconnect button', () => {

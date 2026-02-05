@@ -84,7 +84,7 @@ After installation, configure:
 
 ```yaml
 api_key: "your-secret-key" # Generate a random string
-instance_name: "Home"
+instance_name: "HomeAssistant"
 log_level: "INFO"
 ```
 

@@ -204,7 +204,7 @@ These settings are automatically applied to the WhatsApp instance:
 
 ```yaml
 api_key: "my-secret-api-key"
-instance_name: "Home"
+instance_name: "HomeAssistant"
 database_provider: mysql
 database_host: core-mariadb
 database_port: 3306
@@ -456,7 +456,7 @@ curl -X POST "http://homeassistant.local:8080/instance/create" \
   -H "Content-Type: application/json" \
   -H "apikey: your-api-key" \
   -d '{
-    "instanceName": "Home",
+    "instanceName": "HomeAssistant",
     "integration": "WHATSAPP-BAILEYS",
     "qrcode": true
   }'
