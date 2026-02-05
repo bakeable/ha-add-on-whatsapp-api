@@ -1,4 +1,4 @@
-# Home Assistant Add-on: WhatsApp Gateway
+# Home Assistant Add-on: WhatsApp Gateway API
 
 [![License](https://img.shields.io/github/license/bakeable/homeassistant-whatsapp-add-on.svg)](LICENSE)
 [![GitHub Release](https://img.shields.io/github/release/bakeable/homeassistant-whatsapp-add-on.svg)](https://github.com/bakeable/homeassistant-whatsapp-add-on/releases)
@@ -35,7 +35,7 @@ Or manually:
 - Click ⋮ → **Repositories**
 - Add: `https://github.com/bakeable/homeassistant-whatsapp-add-on`
 
-Then install "WhatsApp Gateway" from the add-on store.
+Then install "WhatsApp Gateway API" from the add-on store.
 
 ## Sending Messages
 
@@ -110,7 +110,7 @@ To test changes quickly in your actual Home Assistant:
 
 3. **In Home Assistant:**
    - Go to **Settings** → **Add-ons**
-   - Find **WhatsApp Gateway** under "Local add-ons"
+   - Find **WhatsApp Gateway API** under "Local add-ons"
    - Click **Rebuild** → **Restart**
 
 See [LOCAL_ADDON_SETUP.md](LOCAL_ADDON_SETUP.md) for detailed instructions.

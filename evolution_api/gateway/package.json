@@ -1,7 +1,7 @@
 {
   "name": "whatsapp-gateway",
   "version": "1.0.0",
-  "description": "WhatsApp Gateway for Home Assistant - Ingress UI and Rule Engine",
+  "description": "WhatsApp Gateway API for Home Assistant - Ingress UI and Rule Engine",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",

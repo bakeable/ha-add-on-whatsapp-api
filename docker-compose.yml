@@ -84,7 +84,7 @@ services:
       redis:
         condition: service_healthy
 
-  # WhatsApp Gateway - Node.js backend + React UI
+  # WhatsApp Gateway API - Node.js backend + React UI
   gateway:
     container_name: whatsapp_gateway
     build:

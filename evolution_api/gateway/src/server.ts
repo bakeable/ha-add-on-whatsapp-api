@@ -114,7 +114,7 @@ async function main(): Promise<void> {
   // Start server
   const PORT = config.gatewayPort;
   app.listen(PORT, '0.0.0.0', async () => {
-    console.log(`[Gateway] WhatsApp Gateway started on port ${PORT}`);
+    console.log(`[Gateway] WhatsApp Gateway API started on port ${PORT}`);
     console.log(`[Gateway] Evolution API: ${config.evolutionUrl}`);
     console.log(`[Gateway] Home Assistant: ${config.haUrl}`);
     

@@ -28,7 +28,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${YELLOW}🔄 Syncing WhatsApp Gateway to Home Assistant...${NC}"
+echo -e "${YELLOW}🔄 Syncing WhatsApp Gateway API to Home Assistant...${NC}"
 echo "   Host: $HA_USER@$HA_HOST"
 echo "   Path: /addons/local/$ADDON_NAME"
 echo ""
@@ -101,7 +101,7 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "Next steps:"
     echo "  1. Go to Settings → Add-ons in Home Assistant"
-    echo "  2. Find 'WhatsApp Gateway' under Local add-ons"
+    echo "  2. Find 'WhatsApp Gateway API' under Local add-ons"
     echo ""
     echo "  First time setup:"
     echo "    - Click 'Install'"

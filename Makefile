@@ -2,7 +2,7 @@
 
 # Default target
 help:
-	@echo "WhatsApp Gateway - Development Commands"
+	@echo "WhatsApp Gateway API - Development Commands"
 	@echo ""
 	@echo "Sync & Deploy:"
 	@echo "  make sync          Sync code to Home Assistant local add-on"

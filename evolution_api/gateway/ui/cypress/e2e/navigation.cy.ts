@@ -8,7 +8,7 @@ describe('Navigation', () => {
   })
 
   it('displays header with app title', () => {
-    cy.contains('WhatsApp Gateway').should('be.visible')
+    cy.contains('WhatsApp Gateway API').should('be.visible')
   })
 
   it('shows all navigation tabs', () => {

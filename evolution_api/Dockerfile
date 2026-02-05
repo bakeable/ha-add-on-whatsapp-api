@@ -9,7 +9,7 @@ FROM evoapicloud/evolution-api:v2.3.7
 
 # Required Home Assistant Labels
 LABEL \
-    io.hass.name="WhatsApp Gateway" \
+    io.hass.name="WhatsApp Gateway API" \
     io.hass.description="Send and receive WhatsApp messages from Home Assistant" \
     io.hass.arch="${BUILD_ARCH}" \
     io.hass.type="addon" \

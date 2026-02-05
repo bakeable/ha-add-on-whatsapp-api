@@ -1,6 +1,6 @@
 # Local Add-on Development Setup
 
-This guide shows how to quickly test the WhatsApp Gateway add-on in your Home Assistant without publishing to a repository.
+This guide shows how to quickly test the WhatsApp Gateway API add-on in your Home Assistant without publishing to a repository.
 
 ## Prerequisites
 
@@ -75,7 +75,7 @@ ha supervisor restart
 
 1. Go to **Settings** → **Add-ons**
 2. Look under **Local add-ons**
-3. You should see **WhatsApp Gateway**
+3. You should see **WhatsApp Gateway API**
 4. Click on it and click **Install**
 
 ## Configuration

@@ -280,7 +280,7 @@ node dist/main.js &
 API_PID=$!
 
 # Start the Gateway
-log_info "Starting WhatsApp Gateway on port 8099..."
+log_info "Starting WhatsApp Gateway API on port 8099..."
 export GATEWAY_PORT=8099
 export EVOLUTION_URL="http://localhost:${SERVER_PORT}"
 export EVOLUTION_API_KEY="${AUTHENTICATION_API_KEY}"

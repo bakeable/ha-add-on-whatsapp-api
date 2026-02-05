@@ -1,12 +1,12 @@
-# WhatsApp Gateway - Local Development
+# WhatsApp Gateway API - Local Development
 
-This guide explains how to develop and test the WhatsApp Gateway UI locally.
+This guide explains how to develop and test the WhatsApp Gateway API UI locally.
 
 ## Quick Start
 
 ### 1. Start the Mock Backend
 
-The mock server simulates the WhatsApp Gateway backend without requiring Evolution API or Home Assistant:
+The mock server simulates the WhatsApp Gateway API backend without requiring Evolution API or Home Assistant:
 
 ```bash
 cd evolution_api/gateway

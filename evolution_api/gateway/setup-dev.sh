@@ -1,9 +1,9 @@
 #!/bin/bash
-# Local development setup script for WhatsApp Gateway
+# Local development setup script for WhatsApp Gateway API
 
 set -e
 
-echo "🚀 WhatsApp Gateway - Local Development Setup"
+echo "🚀 WhatsApp Gateway API - Local Development Setup"
 echo ""
 
 # Check if we're in the right directory

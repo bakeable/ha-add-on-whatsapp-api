@@ -1,6 +1,6 @@
 /**
  * Mock API server for local development and testing
- * Simulates the WhatsApp Gateway backend without Evolution API or Home Assistant
+ * Simulates the WhatsApp Gateway API backend without Evolution API or Home Assistant
  * 
  * Run: npx ts-node mock-server.ts
  * Or: npm run mock-server

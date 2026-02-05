@@ -1,4 +1,4 @@
-# WhatsApp Gateway Add-on Documentation
+# WhatsApp Gateway API Add-on Documentation
 
 ## Overview
 
@@ -106,7 +106,7 @@ To send to a group, use the group's JID (available in the Chats tab):
 
 ## Gateway Features
 
-The add-on includes a custom **WhatsApp Gateway UI** that lets you:
+The add-on includes a custom **WhatsApp Gateway API UI** that lets you:
 
 - **Connect WhatsApp** by scanning a QR code right from the Home Assistant interface
 - **Discover chats** and enable/disable which ones can trigger automations
@@ -139,7 +139,7 @@ If you have an existing MySQL/MariaDB server on your network, you can use that i
    - Add: `https://github.com/bakeable/homeassistant-whatsapp-add-on`
    - Click **Add** → **Close**
 
-3. **Find "WhatsApp Gateway"** in the add-on store and click **Install**
+3. **Find "WhatsApp Gateway API"** in the add-on store and click **Install**
 
 4. **Configure the add-on** (see Configuration section below)
 

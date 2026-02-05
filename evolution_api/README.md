@@ -1,4 +1,4 @@
-# WhatsApp Gateway Add-on for Home Assistant
+# WhatsApp Gateway API Add-on for Home Assistant
 
 ![Supports aarch64 Architecture][aarch64-shield]
 ![Supports amd64 Architecture][amd64-shield]

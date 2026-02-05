@@ -1,5 +1,5 @@
 /**
- * Configuration loader for the WhatsApp Gateway
+ * Configuration loader for the WhatsApp Gateway API
  * Reads from environment variables (set by run.sh from HA config)
  */
 

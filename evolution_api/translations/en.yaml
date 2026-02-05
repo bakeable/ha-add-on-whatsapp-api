@@ -74,4 +74,4 @@ configuration:
 
 network:
   8080/tcp: Evolution API REST endpoint (internal use)
-  8099/tcp: WhatsApp Gateway Web UI
+  8099/tcp: WhatsApp Gateway API Web UI

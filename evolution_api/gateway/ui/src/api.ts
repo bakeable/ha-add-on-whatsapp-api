@@ -1,5 +1,5 @@
 /**
- * API client for the WhatsApp Gateway backend
+ * API client for the WhatsApp Gateway API backend
  */
 
 const API_BASE = '';

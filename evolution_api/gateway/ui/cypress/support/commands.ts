@@ -1,6 +1,6 @@
 /// <reference types="cypress" />
 
-// Custom commands for WhatsApp Gateway testing
+// Custom commands for WhatsApp Gateway API testing
 
 declare global {
   namespace Cypress {

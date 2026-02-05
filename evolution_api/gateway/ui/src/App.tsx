@@ -21,7 +21,7 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center space-x-3">
             <span className="text-2xl">📱</span>
-            <h1 className="text-xl font-semibold">WhatsApp Gateway</h1>
+            <h1 className="text-xl font-semibold">WhatsApp Gateway API</h1>
           </div>
         </div>
       </header>
