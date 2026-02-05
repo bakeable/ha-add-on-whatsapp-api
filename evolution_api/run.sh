@@ -6,6 +6,9 @@
 
 set -e
 
+# Allow unbound variables during initialization
+set +u
+
 # Detect if running in Home Assistant
 IN_HA=false
 BASHIO_AVAILABLE=false
@@ -170,14 +173,19 @@ else
 fi
 
 # Redis configuration (optional but recommended)
-if [ "$IN_HA" = true ] && bashio::config.has_value 'redis_uri'; then
+REDIS_URI=""
+if [ "$BASHIO_AVAILABLE" = true ]; then
+    REDIS_URI=$(bashio::config 'redis_uri' 2>/dev/null || echo "")
+fi
+
+if [ -n "$REDIS_URI" ]; then
     export CACHE_REDIS_ENABLED="true"
-    export CACHE_REDIS_URI=$(bashio::config 'redis_uri')
+    export CACHE_REDIS_URI="$REDIS_URI"
     export CACHE_REDIS_PREFIX_KEY="evolution"
     export CACHE_REDIS_SAVE_INSTANCES="false"
     export CACHE_LOCAL_ENABLED="false"
-    log_info "Redis cache configured"
-elif [ -n "$CACHE_REDIS_URI" ]; then
+    log_info "Redis cache configured: ${REDIS_URI}"
+elif [ -n "${CACHE_REDIS_URI:-}" ]; then
     export CACHE_REDIS_ENABLED="true"
     export CACHE_REDIS_PREFIX_KEY="evolution"
     export CACHE_REDIS_SAVE_INSTANCES="false"
@@ -190,13 +198,18 @@ else
 fi
 
 # Webhook configuration
-if [ "$IN_HA" = true ] && bashio::config.has_value 'webhook_url'; then
-    export WEBHOOK_GLOBAL_URL=$(bashio::config 'webhook_url')
+WEBHOOK_URL=""
+if [ "$BASHIO_AVAILABLE" = true ]; then
+    WEBHOOK_URL=$(bashio::config 'webhook_url' 2>/dev/null || echo "")
+fi
+
+if [ -n "$WEBHOOK_URL" ]; then
+    export WEBHOOK_GLOBAL_URL="$WEBHOOK_URL"
     export WEBHOOK_GLOBAL_ENABLED="true"
     export WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS="true"
     export WEBHOOK_EVENTS_MESSAGES_UPSERT="true"
-    log_info "Global webhook configured: ${WEBHOOK_GLOBAL_URL}"
-elif [ -n "$WEBHOOK_GLOBAL_URL" ]; then
+    log_info "Global webhook configured: ${WEBHOOK_URL}"
+elif [ -n "${WEBHOOK_GLOBAL_URL:-}" ]; then
     export WEBHOOK_GLOBAL_ENABLED="true"
     export WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS="true"
     export WEBHOOK_EVENTS_MESSAGES_UPSERT="true"
