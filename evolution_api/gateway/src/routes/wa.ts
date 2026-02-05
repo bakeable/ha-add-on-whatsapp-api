@@ -11,6 +11,7 @@ import { DatabasePool } from '../db/init';
 export function createWaRoutes(evolutionClient: EvolutionClient, db: DatabasePool): Router {
   const router = Router();
   const config = loadConfig();
+  const INSTANCE_NAME = config.instanceName || 'HomeAssistant';
   
   // Progress tracking for chat refresh
   let refreshProgress = {
@@ -25,13 +26,44 @@ export function createWaRoutes(evolutionClient: EvolutionClient, db: DatabasePoo
   };
   
   /**
+   * GET /api/wa/status
+   * Get current WhatsApp connection status (auto-creates instance if needed)
+   */
+  router.get('/status', async (req: Request, res: Response) => {
+    console.log(`[WA Route] GET /status - using instance: ${INSTANCE_NAME}`);
+    try {
+      // Ensure instance exists
+      console.log(`[WA Route] Calling ensureInstance...`);
+      await evolutionClient.ensureInstance(INSTANCE_NAME);
+      console.log(`[WA Route] ensureInstance completed`);
+      
+      console.log(`[WA Route] Calling getInstanceStatus...`);
+      const status = await evolutionClient.getInstanceStatus(INSTANCE_NAME);
+      console.log(`[WA Route] Status:`, status);
+      res.json({
+        instance: INSTANCE_NAME,
+        status: status.status,
+        phone: status.phone,
+        lastUpdate: status.lastUpdate,
+      });
+    } catch (error: any) {
+      console.error('[WA Route] Status error:', error.message, error.stack);
+      // Return disconnected status if we can't get status
+      res.json({
+        instance: INSTANCE_NAME,
+        status: 'disconnected',
+        error: error.message,
+      });
+    }
+  });
+  
+  /**
    * POST /api/wa/instances
-   * Create or ensure an instance exists
+   * Create or ensure the instance exists (uses fixed instance name)
    */
   router.post('/instances', async (req: Request, res: Response) => {
     try {
-      const instanceName = req.body.instance_name || config.instanceName;
-      const result = await evolutionClient.createInstance(instanceName);
+      const result = await evolutionClient.ensureInstance(INSTANCE_NAME);
       res.json(result);
     } catch (error: any) {
       console.error('[WA] Create instance error:', error);
@@ -40,20 +72,37 @@ export function createWaRoutes(evolutionClient: EvolutionClient, db: DatabasePoo
   });
   
   /**
-   * POST /api/wa/instances/:instance/connect
-   * Request QR code for connection
+   * POST /api/wa/connect
+   * Request QR code for connection (simplified - uses fixed instance)
    */
-  router.post('/instances/:instance/connect', async (req: Request, res: Response) => {
+  router.post('/connect', async (req: Request, res: Response) => {
     try {
-      const { instance } = req.params;
-      const qrData = await evolutionClient.connectInstance(instance);
+      // Ensure instance exists first
+      await evolutionClient.ensureInstance(INSTANCE_NAME);
+      
+      const qrData = await evolutionClient.connectInstance(INSTANCE_NAME);
       res.json({
+        instance: INSTANCE_NAME,
         qr: qrData.qr,
         qr_type: qrData.qrType,
         expires_in: qrData.expiresIn,
       });
     } catch (error: any) {
-      console.error('[WA] Connect instance error:', error);
+      console.error('[WA] Connect error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  /**
+   * POST /api/wa/disconnect
+   * Disconnect from WhatsApp (uses fixed instance)
+   */
+  router.post('/disconnect', async (req: Request, res: Response) => {
+    try {
+      await evolutionClient.disconnectInstance(INSTANCE_NAME);
+      res.json({ success: true, instance: INSTANCE_NAME });
+    } catch (error: any) {
+      console.error('[WA] Disconnect error:', error);
       res.status(500).json({ error: error.message });
     }
   });

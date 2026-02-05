@@ -3,31 +3,33 @@ import { useCallback, useEffect, useState } from "react";
 import { haApi, waApi } from "../api";
 
 interface ConnectionStatus {
-  evolution: "connected" | "disconnected" | "connecting" | "qr" | "unknown";
+  whatsapp: "connected" | "disconnected" | "connecting" | "qr" | "unknown";
   ha: "connected" | "disconnected" | "unknown";
+  instance?: string;
+  phone?: string;
 }
 
 export default function SetupPage() {
   const [status, setStatus] = useState<ConnectionStatus>({
-    evolution: "unknown",
+    whatsapp: "unknown",
     ha: "unknown",
   });
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrType, setQrType] = useState<"base64" | "text">("base64");
-  const [instanceName, setInstanceName] = useState("HomeAssistant");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Check connection status
   const checkStatus = useCallback(async () => {
     try {
-      // Check Evolution API / WhatsApp status
+      // Check WhatsApp status (auto-creates instance if needed)
       const waStatus = await waApi.getStatus();
       setStatus((prev) => ({
         ...prev,
-        evolution: waStatus.evolution_connected ? "connected" : "disconnected",
+        whatsapp: waStatus.status || "disconnected",
+        instance: waStatus.instance,
+        phone: waStatus.phone,
       }));
-      setInstanceName(waStatus.instance_name || "HomeAssistant");
 
       // Check HA status
       const haStatus = await haApi.getStatus();
@@ -50,10 +52,14 @@ export default function SetupPage() {
     if (qrCode) {
       const interval = setInterval(async () => {
         try {
-          const instanceStatus = await waApi.getInstanceStatus(instanceName);
-          if (instanceStatus.status === "connected") {
+          const waStatus = await waApi.getStatus();
+          if (waStatus.status === "connected") {
             setQrCode(null);
-            setStatus((prev) => ({ ...prev, evolution: "connected" }));
+            setStatus((prev) => ({ 
+              ...prev, 
+              whatsapp: "connected",
+              phone: waStatus.phone,
+            }));
           }
         } catch (e) {
           // Ignore polling errors
@@ -61,23 +67,20 @@ export default function SetupPage() {
       }, 2000);
       return () => clearInterval(interval);
     }
-  }, [qrCode, instanceName]);
+  }, [qrCode]);
 
   // Generate QR code
   const handleConnect = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Ensure instance exists
-      await waApi.createInstance(instanceName);
-
-      // Get QR code
-      const qrData = await waApi.connect(instanceName);
+      // Get QR code (instance is auto-created)
+      const qrData = await waApi.connect();
 
       if (qrData.qr) {
         setQrCode(qrData.qr);
         setQrType(qrData.qr_type || "base64");
-        setStatus((prev) => ({ ...prev, evolution: "qr" }));
+        setStatus((prev) => ({ ...prev, whatsapp: "qr" }));
       }
     } catch (e: any) {
       setError(e.message);
@@ -91,8 +94,8 @@ export default function SetupPage() {
     setLoading(true);
     setError(null);
     try {
-      await waApi.disconnect(instanceName);
-      setStatus((prev) => ({ ...prev, evolution: "disconnected" }));
+      await waApi.disconnect();
+      setStatus((prev) => ({ ...prev, whatsapp: "disconnected", phone: undefined }));
       setQrCode(null);
     } catch (e: any) {
       setError(e.message);
@@ -134,8 +137,11 @@ export default function SetupPage() {
         <h3 className="text-lg font-medium mb-4">Connection Status</h3>
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center space-x-2">
-            <span className="text-gray-600">Evolution API:</span>
-            <StatusBadge status={status.evolution} label={status.evolution} />
+            <span className="text-gray-600">WhatsApp:</span>
+            <StatusBadge status={status.whatsapp} label={status.whatsapp} />
+            {status.phone && (
+              <span className="text-sm text-gray-500">({status.phone})</span>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-gray-600">Home Assistant:</span>
@@ -156,17 +162,6 @@ export default function SetupPage() {
             {error}
           </div>
         )}
-
-        <div className="mb-4">
-          <label className="label">Instance Name</label>
-          <input
-            type="text"
-            value={instanceName}
-            onChange={(e) => setInstanceName(e.target.value)}
-            className="input max-w-xs"
-            disabled={status.evolution === "connected"}
-          />
-        </div>
 
         {qrCode ? (
           <div className="space-y-4">
@@ -200,12 +195,12 @@ export default function SetupPage() {
               Cancel
             </button>
           </div>
-        ) : status.evolution === "connected" ? (
+        ) : status.whatsapp === "connected" ? (
           <div className="space-y-4">
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-green-700 font-medium">✓ WhatsApp Connected</p>
               <p className="text-green-600 text-sm">
-                Instance "{instanceName}" is connected and ready.
+                {status.phone ? `Connected as ${status.phone}` : "Instance is connected and ready."}
               </p>
             </div>
             <button
@@ -219,10 +214,10 @@ export default function SetupPage() {
         ) : (
           <button
             onClick={handleConnect}
-            disabled={loading || !instanceName}
+            disabled={loading}
             className="btn btn-success"
           >
-            {loading ? "Generating QR..." : "📷 Generate QR Code"}
+            {loading ? "Generating QR..." : "📷 Connect WhatsApp"}
           </button>
         )}
       </div>

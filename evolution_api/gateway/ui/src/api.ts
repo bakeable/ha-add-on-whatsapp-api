@@ -54,24 +54,16 @@ async function fetchApi(endpoint: string, options: RequestInit = {}) {
   return response.json();
 }
 
-// WhatsApp API
+// WhatsApp API - uses fixed "HomeAssistant" instance
 export const waApi = {
+  // Get connection status (auto-creates instance if needed)
   getStatus: () => fetchApi('/api/wa/status'),
   
-  createInstance: (instanceName: string) =>
-    fetchApi('/api/wa/instances', {
-      method: 'POST',
-      body: JSON.stringify({ instance_name: instanceName }),
-    }),
+  // Connect to WhatsApp (get QR code)
+  connect: () => fetchApi('/api/wa/connect', { method: 'POST' }),
   
-  connect: (instance: string) =>
-    fetchApi(`/api/wa/instances/${instance}/connect`, { method: 'POST' }),
-  
-  getInstanceStatus: (instance: string) =>
-    fetchApi(`/api/wa/instances/${instance}/status`),
-  
-  disconnect: (instance: string) =>
-    fetchApi(`/api/wa/instances/${instance}/disconnect`, { method: 'POST' }),
+  // Disconnect from WhatsApp
+  disconnect: () => fetchApi('/api/wa/disconnect', { method: 'POST' }),
   
   getChats: (params?: { type?: string; enabled?: boolean }) => {
     const query = new URLSearchParams();

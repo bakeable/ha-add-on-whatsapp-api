@@ -54,20 +54,64 @@ export class EvolutionClient {
    * Create a new WhatsApp instance
    */
   async createInstance(instanceName: string): Promise<{ instanceName: string; status: string }> {
+    console.log(`[Evolution] Creating instance: ${instanceName}`);
     try {
       const response = await this.client.post('/instance/create', {
         instanceName,
         integration: 'WHATSAPP-BAILEYS',
       });
+      console.log(`[Evolution] Create instance response:`, JSON.stringify(response.data, null, 2));
       return {
         instanceName: response.data.instance?.instanceName || instanceName,
         status: 'created',
       };
     } catch (error: any) {
-      if (error.response?.status === 400 && error.response?.data?.response?.message?.includes('already')) {
+      console.error(`[Evolution] Create instance error:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+      });
+      
+      // Handle "already exists" error (can be 400 or 500 depending on Evolution API version)
+      const errorData = error.response?.data;
+      const message = errorData?.response?.message || errorData?.message || '';
+      console.log(`[Evolution] Error message: "${message}"`);
+      
+      if (message.toLowerCase().includes('already') || message.toLowerCase().includes('exist')) {
+        console.log(`[Evolution] Instance already exists, returning success`);
         return { instanceName, status: 'exists' };
       }
+      
+      // If we get an error, try to check if instance exists
+      if (error.response?.status === 400 || error.response?.status === 500) {
+        console.log(`[Evolution] Got ${error.response?.status}, checking if instance exists...`);
+        try {
+          const status = await this.getInstanceStatus(instanceName);
+          console.log(`[Evolution] Instance exists with status: ${status.status}`);
+          return { instanceName, status: status.status };
+        } catch (checkError: any) {
+          console.log(`[Evolution] Instance check failed:`, checkError.message);
+        }
+      }
       throw error;
+    }
+  }
+  
+  /**
+   * Ensure instance exists - create if not
+   */
+  async ensureInstance(instanceName: string): Promise<{ instanceName: string; status: string }> {
+    console.log(`[Evolution] Ensuring instance exists: ${instanceName}`);
+    try {
+      // First check if instance exists
+      const status = await this.getInstanceStatus(instanceName);
+      console.log(`[Evolution] Instance exists with status: ${status.status}`);
+      return { instanceName, status: status.status };
+    } catch (error: any) {
+      console.log(`[Evolution] Instance not found, creating...`, error.message);
+      // Instance doesn't exist, create it
+      return this.createInstance(instanceName);
     }
   }
   
@@ -99,8 +143,10 @@ export class EvolutionClient {
    * Get instance connection status
    */
   async getInstanceStatus(instanceName: string): Promise<InstanceStatus> {
+    console.log(`[Evolution] Getting status for instance: ${instanceName}`);
     try {
       const response = await this.client.get(`/instance/connectionState/${instanceName}`);
+      console.log(`[Evolution] Connection state response:`, JSON.stringify(response.data, null, 2));
       const state = response.data.instance?.state || 'disconnected';
       
       // Map Evolution states to our simplified states
@@ -109,17 +155,20 @@ export class EvolutionClient {
       else if (state === 'connecting') status = 'connecting';
       else if (state === 'close') status = 'disconnected';
       
+      console.log(`[Evolution] Mapped state "${state}" to status "${status}"`);
       return {
         instanceName,
         status,
         lastUpdate: new Date().toISOString(),
       };
-    } catch (error) {
-      return {
-        instanceName,
-        status: 'disconnected',
-        lastUpdate: new Date().toISOString(),
-      };
+    } catch (error: any) {
+      console.log(`[Evolution] getInstanceStatus error:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+      });
+      throw error; // Re-throw so ensureInstance knows to create
     }
   }
   
