@@ -49,23 +49,23 @@ export SERVER_TYPE="http"
 export SERVER_PORT="8080"
 export SERVER_URL="http://localhost:8080"
 
-# API Key
-if [ "$IN_HA" = true ] && bashio::config.has_value 'api_key'; then
-    export AUTHENTICATION_API_KEY=$(bashio::config 'api_key')
-    export AUTHENTICATION_TYPE="apikey"
-    export AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES="true"
-    log_info "API key configured"
-elif [ -n "$AUTHENTICATION_API_KEY" ]; then
-    export AUTHENTICATION_TYPE="apikey"
-    export AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES="true"
-    log_info "API key configured from environment"
+# API Key - auto-generate and persist
+API_KEY_FILE="/data/.evolution_api_key"
+
+if [ -f "$API_KEY_FILE" ]; then
+    # Load previously generated API key
+    export AUTHENTICATION_API_KEY=$(cat "$API_KEY_FILE")
+    log_info "Using persisted API key"
 else
-    # Generate a random API key if none provided
+    # Generate a new random API key and persist it
     export AUTHENTICATION_API_KEY=$(cat /proc/sys/kernel/random/uuid | tr '[:lower:]' '[:upper:]')
-    export AUTHENTICATION_TYPE="apikey"
-    export AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES="true"
-    log_warning "No API key set - generated: ${AUTHENTICATION_API_KEY}"
+    echo "$AUTHENTICATION_API_KEY" > "$API_KEY_FILE"
+    chmod 600 "$API_KEY_FILE"
+    log_info "Generated and persisted new API key"
 fi
+
+export AUTHENTICATION_TYPE="apikey"
+export AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES="true"
 
 # Logging
 if [ "$IN_HA" = true ]; then

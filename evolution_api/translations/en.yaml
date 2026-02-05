@@ -1,10 +1,5 @@
 # English translations for WhatsApp API add-on
 configuration:
-  api_key:
-    name: API Key
-    description: >-
-      API key for Evolution API authentication. If left empty, a random key will be
-      generated on startup (check the add-on logs for the key).
   instance_name:
     name: Instance Name
     description: >-

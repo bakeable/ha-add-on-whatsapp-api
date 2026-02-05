@@ -2,7 +2,7 @@
 # https://github.com/bakeable/homeassistant-whatsapp-add-on
 
 name: WhatsApp Gateway API
-version: "1.0.0"
+version: "1.0.1"
 slug: whatsapp_gateway_api
 description: >-
   Send and receive WhatsApp messages from Home Assistant. Provides a notify
@@ -44,16 +44,14 @@ map:
 
 # User-configurable options
 options:
-  api_key: ""
   instance_name: "HomeAssistant"
-  webhook_url: ""
   log_level: "INFO"
   database_provider: "mysql"
   database_host: "core-mariadb"
   database_port: 3306
   database_name: "evolution"
-  database_user: "evolution"
-  database_password: ""
+  database_user: "homeassistant"
+  database_password: "password"
   redis_uri: ""
   # Instance settings
   sync_full_history: true
@@ -67,9 +65,7 @@ options:
 
 # Schema for options validation
 schema:
-  api_key: str?
   instance_name: str
-  webhook_url: url?
   log_level: list(DEBUG|INFO|WARN|ERROR)
   database_provider: list(mysql|postgresql)
   database_host: str
