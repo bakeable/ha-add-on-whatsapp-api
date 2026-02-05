@@ -3,14 +3,30 @@
  */
 
 // Detect if we're running under Home Assistant ingress
-// HA ingress injects X-Ingress-Path header, which we expose via window.__INGRESS_PATH__
 declare global {
   interface Window {
     __INGRESS_PATH__?: string;
   }
 }
 
-const API_BASE = window.__INGRESS_PATH__ || '';
+// Try to get ingress path from server injection, or auto-detect from URL
+function getIngressPath(): string {
+  // First check if server injected the path
+  if (window.__INGRESS_PATH__) {
+    return window.__INGRESS_PATH__;
+  }
+  
+  // Fallback: detect from current URL path
+  // Ingress paths typically look like /6f0284fb_whatsapp_gateway_api
+  const pathParts = window.location.pathname.split('/').filter(p => p);
+  if (pathParts.length > 0 && pathParts[0].includes('_')) {
+    return '/' + pathParts[0];
+  }
+  
+  return '';
+}
+
+const API_BASE = getIngressPath();
 
 async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const response = await fetch(`${API_BASE}${endpoint}`, {

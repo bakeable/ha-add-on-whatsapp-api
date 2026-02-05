@@ -114,23 +114,25 @@ async function main(): Promise<void> {
 
   // SPA fallback - serve index.html for all other routes
   app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api/') && !req.path.startsWith('/webhook/')) {
-      // Inject ingress path into the HTML
-      const ingressPath = req.headers['x-ingress-path'] || '';
-      
-      if (indexHtmlTemplate) {
-        // Inject the ingress path script into the head
-        const modifiedHtml = indexHtmlTemplate.replace(
-          '</head>',
-          `  <script>window.__INGRESS_PATH__ = '${ingressPath}';</script>\n</head>`
-        );
-        res.send(modifiedHtml);
-      } else {
-        // Fallback if we couldn't read the template
-        res.sendFile(indexHtmlPath);
-      }
-    } else {
+    // Don't serve index.html for API or webhook routes (check anywhere in path, not just prefix)
+    if (req.path.includes('/api/') || req.path.includes('/webhook/')) {
       res.status(404).json({ error: 'Not found' });
+      return;
+    }
+    
+    // Inject ingress path into the HTML
+    const ingressPath = req.headers['x-ingress-path'] || '';
+    
+    if (indexHtmlTemplate) {
+      // Inject the ingress path script into the head
+      const modifiedHtml = indexHtmlTemplate.replace(
+        '</head>',
+        `  <script>window.__INGRESS_PATH__ = '${ingressPath}';</script>\n</head>`
+      );
+      res.send(modifiedHtml);
+    } else {
+      // Fallback if we couldn't read the template
+      res.sendFile(indexHtmlPath);
     }
   });
 
