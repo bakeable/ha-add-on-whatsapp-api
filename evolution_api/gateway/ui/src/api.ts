@@ -118,6 +118,8 @@ export const haApi = {
   
   getAllowedServices: () => fetchApi('/api/ha/allowed-services'),
   
+  getServiceDetails: (service: string) => fetchApi(`/api/ha/service-details?service=${encodeURIComponent(service)}`),
+  
   callService: (service: string, target?: { entity_id?: string }, data?: Record<string, any>) =>
     fetchApi('/api/ha/call-service', {
       method: 'POST',
@@ -143,6 +145,12 @@ export const rulesApi = {
   
   test: (message: { chat_id: string; sender_id: string; text: string }) =>
     fetchApi('/api/rules/test', {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    }),
+  
+  testExecute: (message: { chat_id: string; sender_id: string; text: string; event?: string; sender_name?: string }) =>
+    fetchApi('/api/rules/test-execute', {
       method: 'POST',
       body: JSON.stringify({ message }),
     }),
@@ -173,5 +181,20 @@ export const logsApi = {
     if (params?.limit) query.set('limit', String(params.limit));
     if (params?.rule_id) query.set('rule_id', params.rule_id);
     return fetchApi(`/api/logs/rules?${query}`);
+  },
+
+  getEvents: (params?: { page?: number; limit?: number; event_type?: string; chat_id?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.event_type) query.set('event_type', params.event_type);
+    if (params?.chat_id) query.set('chat_id', params.chat_id);
+    return fetchApi(`/api/logs/events?${query}`);
+  },
+
+  getStats: (hours?: number) => {
+    const query = new URLSearchParams();
+    if (hours) query.set('hours', String(hours));
+    return fetchApi(`/api/logs/stats?${query}`);
   },
 };

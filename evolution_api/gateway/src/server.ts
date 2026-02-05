@@ -6,6 +6,7 @@ import { HAClient } from './clients/ha';
 import { loadConfig } from './config';
 import { initDatabase } from './db/init';
 import { RuleEngine } from './engine/rule-engine';
+import { EVOLUTION_EVENTS } from './engine/types';
 import { createHaRoutes } from './routes/ha';
 import { createLogsRoutes } from './routes/logs';
 import { createNotifyRoutes } from './routes/notify';
@@ -55,6 +56,31 @@ async function registerServiceDiscovery(): Promise<void> {
   } catch (error: any) {
     console.warn('[Gateway] Could not register with Discovery API:', error.message);
   }
+}
+
+/**
+ * Register a webhook with Evolution API so that ALL events are forwarded to the gateway.
+ * Retries a few times because the Evolution API instance may not be ready yet.
+ */
+async function registerEvolutionWebhook(evolutionClient: EvolutionClient): Promise<void> {
+  const instanceName = config.instanceName;
+  const webhookUrl = `http://localhost:${config.gatewayPort}/webhook/evolution`;
+
+  const maxRetries = 5;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await evolutionClient.setWebhook(instanceName, webhookUrl, [...EVOLUTION_EVENTS]);
+      console.log(`[Gateway] Webhook registered with Evolution API for instance "${instanceName}" → ${webhookUrl}`);
+      console.log(`[Gateway] Listening for ${EVOLUTION_EVENTS.length} event types`);
+      return;
+    } catch (err: any) {
+      console.warn(`[Gateway] Webhook registration attempt ${attempt}/${maxRetries} failed: ${err.message}`);
+      if (attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
+  }
+  console.error('[Gateway] Could not register webhook after all retries – events may not be received');
 }
 
 async function main(): Promise<void> {
@@ -164,6 +190,9 @@ async function main(): Promise<void> {
     
     // Register with HA Discovery API after startup
     await registerServiceDiscovery();
+    
+    // Auto-register webhook with Evolution API so it sends ALL events to us
+    await registerEvolutionWebhook(evolutionClient);
   });
 
   // Handle shutdown

@@ -8,6 +8,7 @@
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn src/server.ts",
     "mock": "ts-node mock-server.ts",
+    "test": "ts-node src/engine/__tests__/rule-engine.test.ts",
     "build:ui": "cd ui && npm run build && cp -r dist ../public"
   },
   "dependencies": {

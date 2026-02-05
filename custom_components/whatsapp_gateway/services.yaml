@@ -1,0 +1,58 @@
+send_message:
+  name: Send WhatsApp Message
+  description: Send a text message via WhatsApp
+  fields:
+    number:
+      name: Phone Number
+      description: WhatsApp phone number (with country code, e.g., 31612345678) or full JID (e.g., 31612345678@s.whatsapp.net)
+      required: true
+      example: "31612345678"
+      selector:
+        text:
+    text:
+      name: Message Text
+      description: The message text to send
+      required: true
+      example: "Hello from Home Assistant!"
+      selector:
+        text:
+          multiline: true
+
+send_media:
+  name: Send WhatsApp Media
+  description: Send an image, video, document, or audio file via WhatsApp
+  fields:
+    number:
+      name: Phone Number
+      description: WhatsApp phone number (with country code, e.g., 31612345678) or full JID
+      required: true
+      example: "31612345678"
+      selector:
+        text:
+    media_url:
+      name: Media URL
+      description: URL of the media file to send
+      required: true
+      example: "https://example.com/image.jpg"
+      selector:
+        text:
+    media_type:
+      name: Media Type
+      description: Type of media being sent
+      required: false
+      default: "image"
+      selector:
+        select:
+          options:
+            - "image"
+            - "document"
+            - "audio"
+            - "video"
+    caption:
+      name: Caption
+      description: Optional caption for the media
+      required: false
+      example: "Check this out!"
+      selector:
+        text:
+          multiline: true

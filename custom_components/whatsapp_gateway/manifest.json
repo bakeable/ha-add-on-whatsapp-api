@@ -1,0 +1,12 @@
+{
+  "domain": "whatsapp_gateway",
+  "name": "WhatsApp Gateway",
+  "version": "1.0.0",
+  "documentation": "https://github.com/bakeable/homeassistant-whatsapp-gateway",
+  "issue_tracker": "https://github.com/bakeable/homeassistant-whatsapp-gateway/issues",
+  "requirements": ["aiohttp"],
+  "dependencies": ["hassio"],
+  "codeowners": ["@bakeable"],
+  "iot_class": "local_push",
+  "config_flow": true
+}

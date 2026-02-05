@@ -202,6 +202,31 @@ async function runMigrations(pool: Pool): Promise<void> {
         )`,
       ],
     },
+    {
+      name: '007_create_event_log',
+      statements: [
+        `CREATE TABLE IF NOT EXISTS wa_event_log (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          event_type VARCHAR(100) NOT NULL,
+          instance_name VARCHAR(255),
+          chat_id VARCHAR(255),
+          sender_id VARCHAR(255),
+          summary TEXT,
+          raw_payload JSON,
+          received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_event_log_type (event_type),
+          INDEX idx_event_log_received (received_at),
+          INDEX idx_event_log_chat (chat_id)
+        )`,
+      ],
+    },
+    {
+      name: '008_add_event_type_to_rule_fire',
+      statements: [
+        `ALTER TABLE wa_rule_fire ADD COLUMN IF NOT EXISTS event_type VARCHAR(100) DEFAULT 'MESSAGES_UPSERT'`,
+        `CREATE INDEX IF NOT EXISTS idx_rule_fire_event ON wa_rule_fire (event_type)`,
+      ],
+    },
   ];
 
   // Get applied migrations

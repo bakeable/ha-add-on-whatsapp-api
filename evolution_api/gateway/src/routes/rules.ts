@@ -1,11 +1,12 @@
 /**
  * Rules API Routes
- * Endpoints for YAML rule management, validation, and testing
+ * Endpoints for YAML rule management, validation, testing, and live execution
  */
 
 import { Request, Response, Router } from 'express';
 import { DatabasePool } from '../db/init';
 import { RuleEngine } from '../engine/rule-engine';
+import { EVOLUTION_EVENTS, EvolutionEventType } from '../engine/types';
 
 export function createRulesRoutes(db: DatabasePool, ruleEngine: RuleEngine): Router {
   const router = Router();
@@ -110,6 +111,56 @@ export function createRulesRoutes(db: DatabasePool, ruleEngine: RuleEngine): Rou
       });
     } catch (error: any) {
       console.error('[Rules] Test error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  /**
+   * POST /api/rules/test-execute
+   * Test a simulated message against current rules AND actually execute actions.
+   * This is a LIVE execution – HA services will be called and WhatsApp replies sent.
+   */
+  router.post('/test-execute', async (req: Request, res: Response) => {
+    try {
+      const { message } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ error: 'Message is required' });
+      }
+      
+      const chatId = message.chat_id || '';
+      const senderId = message.sender_id || '';
+      const text = message.text || '';
+      const event = (message.event as EvolutionEventType) || 'MESSAGES_UPSERT';
+      
+      // Validate event type
+      if (!EVOLUTION_EVENTS.includes(event)) {
+        return res.status(400).json({ error: `Invalid event type: ${event}. Must be one of: ${EVOLUTION_EVENTS.join(', ')}` });
+      }
+      
+      // Determine chat type from chat_id
+      const chatType = chatId.endsWith('@g.us') ? 'group' : 'direct';
+      
+      console.log(`[Rules] ▶ Test-execute: event=${event}, chat=${chatId}, sender=${senderId}, text="${text.substring(0, 80)}"`);
+      
+      const result = await ruleEngine.processMessage({
+        chatId,
+        chatType,
+        senderId,
+        senderName: message.sender_name,
+        text,
+        event,
+      });
+      
+      console.log(`[Rules] ◀ Test-execute done: ${result.evaluatedRules.filter(r => r.matched).length} matched, ${result.executedActions.length} actions executed`);
+      
+      res.json({
+        evaluated_rules: result.evaluatedRules,
+        executed_actions: result.executedActions,
+        logs: result.logs,
+      });
+    } catch (error: any) {
+      console.error('[Rules] Test-execute error:', error);
       res.status(500).json({ error: error.message });
     }
   });

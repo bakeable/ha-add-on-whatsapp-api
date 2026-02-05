@@ -67,6 +67,27 @@ export function createHaRoutes(haClient: HAClient): Router {
   });
   
   /**
+   * GET /api/ha/service-details
+   * Get service details including parameters
+   */
+  router.get('/service-details', async (req: Request, res: Response) => {
+    try {
+      const service = req.query.service as string;
+      if (!service) {
+        return res.status(400).json({ error: 'service parameter required' });
+      }
+      const details = await haClient.getServiceDetails(service);
+      if (!details) {
+        return res.status(404).json({ error: 'Service not found' });
+      }
+      res.json(details);
+    } catch (error: any) {
+      console.error('[HA] Get service details error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  /**
    * GET /api/ha/automations
    * List all automations
    */

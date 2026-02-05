@@ -5,6 +5,64 @@ All notable changes to the WhatsApp Gateway API add-on will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.18] - 2025-02-06
+
+### Added
+
+- **Multi-event rule triggers**: Rules can now subscribe to any combination of 20 Evolution API event types (e.g., MESSAGES_UPSERT, CALL, CONNECTION_UPDATE, GROUP_PARTICIPANTS_UPDATE, etc.)
+- **Text match modes**: New `mode` field for text matching — `contains` (normalised, case-insensitive), `starts_with`, and `regex`
+- **Text normalisation**: `contains` and `starts_with` modes automatically lowercase, trim, and collapse whitespace before comparison
+- **Sender phone number filter**: Match rules by sender phone numbers (auto-extracts from WhatsApp JIDs)
+- **Sender JID filter**: Match rules by exact sender JIDs (e.g., `31612345678@s.whatsapp.net`) — both `sender.ids` and `sender.numbers` supported simultaneously with AND logic
+- **Live rule test execution**: New Test & Debug page allows simulating events and executing matching rules for real (HA services called, WhatsApp replies sent) with detailed results showing evaluated rules, executed actions, timing, and verbose execution logs
+- **Event log**: All incoming Evolution API webhook events are logged to `wa_event_log` table with event type, chat, sender, and summary
+- **Events tab in Logs page**: Browse all received Evolution API events with event-type filtering
+- **Auto webhook registration**: Gateway registers itself with Evolution API on startup to receive ALL event types
+- **Unit tests**: Added comprehensive tests for `normaliseText()`, `extractPhoneNumber()`, and rule matching logic
+- **`event_type` column** on `wa_rule_fire` table to track which event triggered each rule execution
+
+### Changed
+
+- **Rules schema**: Text filter changed from `contains[]`/`starts_with`/`regex` to unified `{ mode, patterns[] }` structure
+- **Sender filter**: Support both `sender.ids` (exact JID match) and `sender.numbers` (phone number extraction) — AND logic when both specified
+- **Verbose logging**: Rule engine now logs step-by-step matching, action execution with timing, and detailed results
+- **Webhook events**: `run.sh` now configures Evolution API to forward all 20 event types (was only 3)
+- **Rules UI Guided Builder**: Rebuilt with event selector, text match mode dropdown, sender number input, and live YAML preview
+- **Rule fires table**: Now shows the triggering event type
+
+## [1.1.17] - 2025-02-05
+
+### Added
+
+- **Custom Integration**: New `custom_components/whatsapp_gateway/` integration that registers proper HA services
+  - `whatsapp_gateway.send_message` - Send text messages
+  - `whatsapp_gateway.send_media` - Send images, videos, documents, audio
+  - Services appear in automation editor action dropdown
+- **Rules Page Enhancements**:
+  - Auto-generate rule ID from rule name (e.g., "Motion Alert" → "motion_alert")
+  - Multi-select chat filter with search functionality
+  - HA service parameter display (shows required/optional fields for services)
+
+### Changed
+
+- Improved Rules guided builder UI with better service action configuration
+
+## [1.1.16] - 2025-02-05
+
+### Fixed
+
+- Empty page on initial load - now auto-redirects to appropriate page based on connection status
+- "Create Rule" button 404 error - fixed to use client-side navigation
+- `reply_whatsapp` action now properly logged in gateway logs
+
+## [1.1.15] - 2025-02-05
+
+### Fixed
+
+- Prisma database migrations now run correctly on startup
+- Fixed "Table 'Instance' doesn't exist" error by properly running migrations
+- Copies mysql-migrations folder and sets DATABASE_URL before migrate deploy
+
 ## [1.1.6] - 2026-02-05
 
 ### Fixed

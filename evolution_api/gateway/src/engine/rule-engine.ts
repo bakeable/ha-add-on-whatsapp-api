@@ -1,6 +1,12 @@
 /**
  * Rule Engine
- * Parses YAML rules, validates, matches messages, and executes actions
+ * Parses YAML rules, validates, matches incoming Evolution API events, and executes actions.
+ * 
+ * Key concepts:
+ *  - Rules subscribe to one or more Evolution API events (default: MESSAGES_UPSERT).
+ *  - Matching filters: chat type/IDs, sender numbers, text mode (contains/starts_with/regex).
+ *  - Text "contains" matching normalises both sides (lowercase, trim, collapse whitespace).
+ *  - Every rule fire and its action results are logged to the database.
  */
 
 import Ajv from 'ajv';
@@ -10,6 +16,8 @@ import { HAClient } from '../clients/ha';
 import { loadConfig } from '../config';
 import { DatabasePool } from '../db/init';
 import {
+    EvolutionEventType,
+    ExecutionResult,
     Rule,
     RULE_SCHEMA,
     RuleSet,
@@ -25,6 +33,27 @@ export interface IncomingMessage {
   senderName?: string;
   text: string;
   messageId?: string;
+  /** The Evolution API event that generated this message */
+  event?: EvolutionEventType;
+}
+
+/**
+ * Normalise text for comparison: lowercase, trim, collapse whitespace.
+ * This makes "contains" matching resilient to extra spaces, casing, etc.
+ */
+export function normaliseText(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Extract the bare phone number from a JID or phone string.
+ * "31612345678@s.whatsapp.net" → "31612345678"
+ */
+export function extractPhoneNumber(jidOrPhone: string): string {
+  return jidOrPhone.split('@')[0].replace(/[^0-9]/g, '');
 }
 
 export class RuleEngine {
@@ -42,16 +71,12 @@ export class RuleEngine {
     this.ajv = new Ajv({ allErrors: true, verbose: true });
   }
   
-  /**
-   * Initialize the rule engine (load rules from database)
-   */
+  // ──────────────────────────── Lifecycle ────────────────────────────
+  
   async init(): Promise<void> {
     await this.reloadRules();
   }
   
-  /**
-   * Reload rules from database into memory cache
-   */
   async reloadRules(): Promise<void> {
     const row = await this.db.getOne<any>('SELECT parsed_json FROM wa_ruleset WHERE id = 1');
     if (row?.parsed_json) {
@@ -68,13 +93,11 @@ export class RuleEngine {
     }
   }
   
-  /**
-   * Parse and validate YAML rules
-   */
+  // ──────────────────────────── Validation ────────────────────────────
+  
   validateYaml(yamlText: string): ValidationResult {
     const errors: ValidationError[] = [];
     
-    // Try to parse YAML
     let parsed: any;
     try {
       parsed = yaml.load(yamlText, { schema: yaml.DEFAULT_SCHEMA });
@@ -90,7 +113,6 @@ export class RuleEngine {
       };
     }
     
-    // Validate against schema
     const validate = this.ajv.compile(RULE_SCHEMA);
     const valid = validate(parsed);
     
@@ -103,34 +125,38 @@ export class RuleEngine {
       }
     }
     
-    // Additional validation: check for duplicate rule IDs
+    // Additional semantic validation
     if (parsed?.rules) {
       const ids = new Set<string>();
       for (let i = 0; i < parsed.rules.length; i++) {
         const rule = parsed.rules[i];
+        
+        // Duplicate ID check
         if (ids.has(rule.id)) {
-          errors.push({
-            path: `rules[${i}].id`,
-            message: `Duplicate rule ID: ${rule.id}`,
-          });
+          errors.push({ path: `rules[${i}].id`, message: `Duplicate rule ID: ${rule.id}` });
         }
         ids.add(rule.id);
         
-        // Validate action specifics
+        // Action-specific checks
         if (rule.actions) {
           for (let j = 0; j < rule.actions.length; j++) {
             const action = rule.actions[j];
             if (action.type === 'ha_service' && !action.service) {
-              errors.push({
-                path: `rules[${i}].actions[${j}].service`,
-                message: 'ha_service action requires a service field',
-              });
+              errors.push({ path: `rules[${i}].actions[${j}].service`, message: 'ha_service action requires a service field' });
             }
             if (action.type === 'reply_whatsapp' && !action.text) {
-              errors.push({
-                path: `rules[${i}].actions[${j}].text`,
-                message: 'reply_whatsapp action requires a text field',
-              });
+              errors.push({ path: `rules[${i}].actions[${j}].text`, message: 'reply_whatsapp action requires a text field' });
+            }
+          }
+        }
+        
+        // Validate regex patterns are valid
+        if (rule.match?.text?.mode === 'regex' && rule.match.text.patterns) {
+          for (const pattern of rule.match.text.patterns) {
+            try {
+              new RegExp(pattern, 'i');
+            } catch (e: any) {
+              errors.push({ path: `rules[${i}].match.text.patterns`, message: `Invalid regex: ${e.message}` });
             }
           }
         }
@@ -145,15 +171,11 @@ export class RuleEngine {
     };
   }
   
-  /**
-   * Save rules to database
-   */
+  // ──────────────────────────── Persistence ────────────────────────────
+  
   async saveRules(yamlText: string): Promise<ValidationResult> {
     const validation = this.validateYaml(yamlText);
-    
-    if (!validation.valid) {
-      return validation;
-    }
+    if (!validation.valid) return validation;
     
     const parsed = yaml.load(yamlText) as RuleSet;
     const parsedJson = JSON.stringify(parsed);
@@ -164,24 +186,18 @@ export class RuleEngine {
       WHERE id = 1
     `, [yamlText, parsedJson]);
     
-    // Reload cache
     this.rulesCache = parsed;
     console.log(`[RuleEngine] Saved ${parsed.rules.length} rules`);
-    
     return validation;
   }
   
-  /**
-   * Get current rules as YAML
-   */
   async getRulesYaml(): Promise<string> {
     const row = await this.db.getOne<any>('SELECT yaml_text FROM wa_ruleset WHERE id = 1');
     return row?.yaml_text || 'version: 1\nrules: []';
   }
   
-  /**
-   * Test a message against rules (without executing actions)
-   */
+  // ──────────────────────────── Testing ────────────────────────────
+  
   testMessage(message: IncomingMessage): TestResult {
     const matched: TestResult['matchedRules'] = [];
     const actions: TestResult['actionsPreview'] = [];
@@ -190,213 +206,264 @@ export class RuleEngine {
       return { matchedRules: [], actionsPreview: [] };
     }
     
-    // Sort rules by priority (lower number = higher priority)
     const sortedRules = [...this.rulesCache.rules]
       .filter(r => r.enabled)
       .sort((a, b) => (a.priority || 100) - (b.priority || 100));
     
     for (const rule of sortedRules) {
       const matchResult = this.matchRule(rule, message);
-      
       if (matchResult.matches) {
-        matched.push({
-          id: rule.id,
-          name: rule.name,
-          reason: matchResult.reason,
-        });
-        
+        matched.push({ id: rule.id, name: rule.name, reason: matchResult.reason });
         for (const action of rule.actions) {
-          actions.push({
-            ruleId: rule.id,
-            type: action.type,
-            details: this.describeAction(action),
-          });
+          actions.push({ ruleId: rule.id, type: action.type, details: this.describeAction(action) });
         }
-        
-        if (rule.stop_on_match !== false) {
-          break; // Stop processing more rules
-        }
+        if (rule.stop_on_match !== false) break;
       }
     }
     
     return { matchedRules: matched, actionsPreview: actions };
   }
   
-  /**
-   * Process an incoming message (match and execute)
-   */
-  async processMessage(message: IncomingMessage, dbMessageId?: number): Promise<void> {
+  // ──────────────────────────── Processing ────────────────────────────
+  
+  async processMessage(message: IncomingMessage, dbMessageId?: number): Promise<ExecutionResult> {
+    const result: ExecutionResult = { evaluatedRules: [], executedActions: [], logs: [] };
+    const log = (msg: string) => {
+      console.log(msg);
+      result.logs.push(msg);
+    };
+
     if (!this.rulesCache?.rules) {
-      return;
+      log('[RuleEngine] No rules loaded – skipping');
+      return result;
     }
     
     const sortedRules = [...this.rulesCache.rules]
       .filter(r => r.enabled)
       .sort((a, b) => (a.priority || 100) - (b.priority || 100));
     
+    log(`[RuleEngine] ▶ Processing message: event=${message.event || 'MESSAGES_UPSERT'}, chat=${message.chatId}, sender=${message.senderId}, text="${message.text.substring(0, 80)}"`);
+    log(`[RuleEngine]   Evaluating ${sortedRules.length} enabled rules (${this.rulesCache.rules.length} total)`);
+
     for (const rule of sortedRules) {
-      // Check cooldown
-      if (await this.isOnCooldown(rule.id, message.chatId)) {
-        console.log(`[RuleEngine] Rule ${rule.id} is on cooldown for chat ${message.chatId}`);
+      const onCooldown = await this.isOnCooldown(rule.id, message.chatId);
+      if (onCooldown) {
+        log(`[RuleEngine]   ⏳ Rule "${rule.id}" (${rule.name}) – skipped (cooldown active for ${message.chatId})`);
+        result.evaluatedRules.push({
+          id: rule.id, name: rule.name, matched: false, reason: 'on cooldown', skippedCooldown: true,
+        });
         continue;
       }
       
       const matchResult = this.matchRule(rule, message);
       
       if (matchResult.matches) {
-        console.log(`[RuleEngine] Rule ${rule.id} matched: ${matchResult.reason}`);
+        log(`[RuleEngine]   ✅ Rule "${rule.id}" (${rule.name}) MATCHED: ${matchResult.reason}`);
         
-        // Execute actions
-        const results = await this.executeActions(rule, message);
+        const actionResults = await this.executeActions(rule, message, log);
+        await this.logRuleFire(rule, message, dbMessageId, actionResults);
         
-        // Log the rule fire
-        await this.logRuleFire(rule, message, dbMessageId, results);
+        const stoppedChain = rule.stop_on_match !== false;
+        result.evaluatedRules.push({
+          id: rule.id, name: rule.name, matched: true, reason: matchResult.reason, stoppedChain,
+        });
+
+        for (const ar of actionResults) {
+          result.executedActions.push({
+            ruleId: rule.id,
+            ruleName: rule.name,
+            type: ar.type,
+            details: ar.details || '',
+            success: ar.success,
+            error: ar.error,
+            durationMs: ar.durationMs || 0,
+          });
+        }
         
-        // Set cooldown if configured
         if (rule.cooldown_seconds && rule.cooldown_seconds > 0) {
           await this.setCooldown(rule.id, message.chatId, rule.cooldown_seconds);
+          log(`[RuleEngine]   ⏱ Cooldown set: ${rule.cooldown_seconds}s for ${message.chatId}`);
         }
         
-        if (rule.stop_on_match !== false) {
+        if (stoppedChain) {
+          log(`[RuleEngine]   🛑 stop_on_match – no more rules evaluated`);
           break;
         }
+      } else {
+        log(`[RuleEngine]   ❌ Rule "${rule.id}" (${rule.name}) – no match`);
+        result.evaluatedRules.push({
+          id: rule.id, name: rule.name, matched: false, reason: matchResult.reason || 'no match',
+        });
       }
     }
+
+    log(`[RuleEngine] ◀ Done. ${result.executedActions.length} action(s) executed across ${result.evaluatedRules.filter(r => r.matched).length} matched rule(s)`);
+    return result;
   }
   
+  // ──────────────────────────── Matching ────────────────────────────
+  
   /**
-   * Match a single rule against a message
+   * Match a single rule against an incoming message.
+   * All specified conditions must pass (AND logic).
    */
-  private matchRule(rule: Rule, message: IncomingMessage): { matches: boolean; reason: string } {
+  matchRule(rule: Rule, message: IncomingMessage, verbose = false): { matches: boolean; reason: string } {
     const reasons: string[] = [];
+    const vlog = verbose ? (msg: string) => console.log(msg) : (_: string) => {};
     
-    // Match chat type
+    vlog(`[RuleEngine]     Checking rule "${rule.id}"…`);
+
+    // 1. Match event type
+    const ruleEvents = rule.match.events ?? ['MESSAGES_UPSERT'];
+    const incomingEvent = message.event ?? 'MESSAGES_UPSERT';
+    if (!ruleEvents.includes(incomingEvent)) {
+      vlog(`[RuleEngine]       ✗ event ${incomingEvent} not in [${ruleEvents.join(', ')}]`);
+      return { matches: false, reason: `event ${incomingEvent} not in [${ruleEvents.join(', ')}]` };
+    }
+    reasons.push(`event=${incomingEvent}`);
+    
+    // 2. Match chat type
     if (rule.match.chat?.type && rule.match.chat.type !== 'any') {
       if (rule.match.chat.type !== message.chatType) {
-        return { matches: false, reason: '' };
+        vlog(`[RuleEngine]       ✗ chatType ${message.chatType} ≠ ${rule.match.chat.type}`);
+        return { matches: false, reason: `chatType ${message.chatType} ≠ ${rule.match.chat.type}` };
       }
-      reasons.push(`chat type is ${message.chatType}`);
+      reasons.push(`chatType=${message.chatType}`);
     }
     
-    // Match chat IDs
+    // 3. Match chat IDs
     if (rule.match.chat?.ids && rule.match.chat.ids.length > 0) {
       if (!rule.match.chat.ids.includes(message.chatId)) {
-        return { matches: false, reason: '' };
+        vlog(`[RuleEngine]       ✗ chatId ${message.chatId} not in [${rule.match.chat.ids.join(', ')}]`);
+        return { matches: false, reason: `chatId ${message.chatId} not in allowed list` };
       }
-      reasons.push(`chat ID matches`);
+      reasons.push('chatId matched');
     }
     
-    // Match sender IDs
+    // 4a. Match sender IDs (exact JID match)
     if (rule.match.sender?.ids && rule.match.sender.ids.length > 0) {
       if (!rule.match.sender.ids.includes(message.senderId)) {
-        return { matches: false, reason: '' };
+        vlog(`[RuleEngine]       ✗ senderId ${message.senderId} not in [${rule.match.sender.ids.join(', ')}]`);
+        return { matches: false, reason: `senderId ${message.senderId} not in allowed list` };
       }
-      reasons.push(`sender ID matches`);
+      reasons.push('senderId matched');
     }
     
-    // Match text content
-    if (rule.match.text) {
-      const text = message.text.toLowerCase();
-      
-      // Contains check
-      if (rule.match.text.contains && rule.match.text.contains.length > 0) {
-        const matched = rule.match.text.contains.some(c => text.includes(c.toLowerCase()));
-        if (!matched) {
-          return { matches: false, reason: '' };
-        }
-        reasons.push(`text contains keyword`);
+    // 4b. Match sender phone numbers (extracted number match)
+    if (rule.match.sender?.numbers && rule.match.sender.numbers.length > 0) {
+      const senderPhone = extractPhoneNumber(message.senderId);
+      const matched = rule.match.sender.numbers.some(n => {
+        const filterPhone = extractPhoneNumber(n);
+        return filterPhone === senderPhone;
+      });
+      if (!matched) {
+        vlog(`[RuleEngine]       ✗ senderPhone ${senderPhone} not in [${rule.match.sender.numbers.join(', ')}]`);
+        return { matches: false, reason: `senderPhone ${senderPhone} not in allowed list` };
       }
-      
-      // Starts with check
-      if (rule.match.text.starts_with) {
-        if (!text.startsWith(rule.match.text.starts_with.toLowerCase())) {
-          return { matches: false, reason: '' };
-        }
-        reasons.push(`text starts with "${rule.match.text.starts_with}"`);
-      }
-      
-      // Regex check
-      if (rule.match.text.regex) {
-        try {
-          const regex = new RegExp(rule.match.text.regex, 'i');
-          if (!regex.test(message.text)) {
-            return { matches: false, reason: '' };
-          }
-          reasons.push(`text matches regex`);
-        } catch (e) {
-          console.error(`[RuleEngine] Invalid regex in rule ${rule.id}:`, e);
-          return { matches: false, reason: '' };
-        }
-      }
+      reasons.push('senderNumber matched');
     }
     
+    // 5. Match text filter
+    if (rule.match.text && rule.match.text.patterns && rule.match.text.patterns.length > 0) {
+      const mode = rule.match.text.mode || 'contains';
+      const normalisedMessage = normaliseText(message.text);
+      let textMatched = false;
+      
+      switch (mode) {
+        case 'contains':
+          textMatched = rule.match.text.patterns.some(p => 
+            normalisedMessage.includes(normaliseText(p))
+          );
+          break;
+        case 'starts_with':
+          textMatched = rule.match.text.patterns.some(p =>
+            normalisedMessage.startsWith(normaliseText(p))
+          );
+          break;
+        case 'regex':
+          textMatched = rule.match.text.patterns.some(p => {
+            try {
+              return new RegExp(p, 'i').test(message.text);
+            } catch {
+              return false;
+            }
+          });
+          break;
+      }
+      
+      if (!textMatched) {
+        vlog(`[RuleEngine]       ✗ text "${message.text.substring(0, 60)}" did not match ${mode} [${rule.match.text.patterns.join(', ')}]`);
+        return { matches: false, reason: `text did not match ${mode} patterns` };
+      }
+      reasons.push(`text ${mode} matched`);
+    }
+    
+    vlog(`[RuleEngine]       ✓ all conditions passed: ${reasons.join(', ')}`);
+    // If the rule has at least one matching criterion beyond the event type check,
+    // or if it deliberately has no filters (catch-all), it matches.
     return {
-      matches: reasons.length > 0 || (!rule.match.chat && !rule.match.sender && !rule.match.text),
-      reason: reasons.join(', ') || 'no specific conditions (matches all)',
+      matches: true,
+      reason: reasons.join(', '),
     };
   }
   
-  /**
-   * Execute rule actions
-   */
-  private async executeActions(rule: Rule, message: IncomingMessage): Promise<Array<{ type: string; success: boolean; error?: string }>> {
-    const results: Array<{ type: string; success: boolean; error?: string }> = [];
+  // ──────────────────────────── Action Execution ────────────────────────────
+  
+  private async executeActions(
+    rule: Rule,
+    message: IncomingMessage,
+    log: (msg: string) => void = console.log,
+  ): Promise<Array<{ type: string; success: boolean; error?: string; details?: string; durationMs?: number }>> {
+    const results: Array<{ type: string; success: boolean; error?: string; details?: string; durationMs?: number }> = [];
     
     for (const action of rule.actions) {
+      const start = Date.now();
       try {
         if (action.type === 'ha_service' && action.service) {
+          const details = this.describeAction(action);
+          log(`[RuleEngine]     → Calling HA service: ${action.service} (target: ${JSON.stringify(action.target)}, data: ${JSON.stringify(action.data)})`);
           const result = await this.haClient.callService(
             action.service,
             action.target,
             action.data,
             this.config.allowedServices
           );
-          results.push({
-            type: 'ha_service',
-            success: result.success,
-            error: result.error,
-          });
+          const durationMs = Date.now() - start;
+          log(`[RuleEngine]     ← HA service result: success=${result.success}${result.error ? ', error=' + result.error : ''} (${durationMs}ms)`);
+          results.push({ type: 'ha_service', success: result.success, error: result.error, details, durationMs });
         } else if (action.type === 'reply_whatsapp' && action.text) {
-          console.log(`[RuleEngine] Sending WhatsApp reply to ${message.chatId}: "${action.text}"`);
+          const details = this.describeAction(action);
+          log(`[RuleEngine]     → Sending WhatsApp reply to ${message.chatId}: "${action.text.substring(0, 120)}"`);
           const sendResult = await this.evolutionClient.sendTextMessage(
             this.config.instanceName,
             message.chatId,
             action.text
           );
-          console.log(`[RuleEngine] WhatsApp reply sent successfully:`, sendResult);
-          results.push({ type: 'reply_whatsapp', success: true });
+          const durationMs = Date.now() - start;
+          log(`[RuleEngine]     ← WhatsApp reply sent: id=${sendResult?.key?.id} (${durationMs}ms)`);
+          results.push({ type: 'reply_whatsapp', success: true, details, durationMs });
         }
       } catch (e: any) {
-        console.error(`[RuleEngine] Action ${action.type} failed:`, e);
-        results.push({
-          type: action.type,
-          success: false,
-          error: e.message,
-        });
+        const durationMs = Date.now() - start;
+        log(`[RuleEngine]     ✖ Action ${action.type} FAILED after ${durationMs}ms: ${e.message}`);
+        results.push({ type: action.type, success: false, error: e.message, details: this.describeAction(action), durationMs });
       }
     }
     
     return results;
   }
   
-  /**
-   * Check if a rule is on cooldown
-   */
+  // ──────────────────────────── Cooldown ────────────────────────────
+  
   private async isOnCooldown(ruleId: string, scopeKey: string): Promise<boolean> {
-    // Clean up expired cooldowns
     await this.db.run('DELETE FROM wa_cooldown WHERE expires_at < NOW()');
-    
     const row = await this.db.getOne<any>(`
       SELECT 1 FROM wa_cooldown 
       WHERE rule_id = ? AND scope_key = ? AND expires_at > NOW()
     `, [ruleId, scopeKey]);
-    
     return !!row;
   }
   
-  /**
-   * Set cooldown for a rule
-   */
   private async setCooldown(ruleId: string, scopeKey: string, seconds: number): Promise<void> {
     await this.db.run(`
       INSERT INTO wa_cooldown (rule_id, scope_key, expires_at)
@@ -405,9 +472,8 @@ export class RuleEngine {
     `, [ruleId, scopeKey, seconds, seconds]);
   }
   
-  /**
-   * Log a rule fire to the database
-   */
+  // ──────────────────────────── Logging ────────────────────────────
+  
   private async logRuleFire(
     rule: Rule,
     message: IncomingMessage,
@@ -420,8 +486,8 @@ export class RuleEngine {
     await this.db.run(`
       INSERT INTO wa_rule_fire (
         rule_id, rule_name, message_id, chat_id, sender_id, matched_text,
-        actions_executed, success, error_message
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        actions_executed, success, error_message, event_type
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       rule.id,
       rule.name,
@@ -431,13 +497,13 @@ export class RuleEngine {
       message.text.substring(0, 500),
       JSON.stringify(results),
       allSuccess ? 1 : 0,
-      errors || null
+      errors || null,
+      message.event || 'MESSAGES_UPSERT',
     ]);
   }
   
-  /**
-   * Describe an action for preview
-   */
+  // ──────────────────────────── Helpers ────────────────────────────
+  
   private describeAction(action: Rule['actions'][0]): string {
     if (action.type === 'ha_service') {
       const target = action.target?.entity_id || 'no target';

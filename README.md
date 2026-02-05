@@ -70,6 +70,25 @@ automation:
           message: "🚨 Motion detected at front door!"
 ```
 
+## Custom Integration (Recommended)
+
+For a better experience with WhatsApp services in the Home Assistant UI, install the custom integration:
+
+1. **Copy** the `custom_components/whatsapp_gateway/` folder to your HA `config/custom_components/` directory
+2. **Restart** Home Assistant
+3. **Add** the integration via Settings → Devices & Services → Add Integration → "WhatsApp Gateway"
+
+This gives you proper services that show up in the automation editor:
+
+```yaml
+service: whatsapp_gateway.send_message
+data:
+  number: "31612345678"
+  text: "Hello from Home Assistant!"
+```
+
+See [custom_components/whatsapp_gateway/README.md](custom_components/whatsapp_gateway/README.md) for full documentation.
+
 ## Use Cases
 
 - 📢 Send notifications when motion is detected

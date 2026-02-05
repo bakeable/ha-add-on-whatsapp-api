@@ -3,6 +3,56 @@ import yaml from 'js-yaml'
 import { useCallback, useEffect, useState } from 'react'
 import { haApi, rulesApi, waApi } from '../api'
 
+/** All Evolution API event types (keep in sync with engine/types.ts) */
+const EVOLUTION_EVENTS = [
+  'MESSAGES_UPSERT',
+  'MESSAGES_UPDATE',
+  'MESSAGES_DELETE',
+  'SEND_MESSAGE',
+  'CONNECTION_UPDATE',
+  'CONTACTS_UPDATE',
+  'CONTACTS_UPSERT',
+  'GROUPS_UPSERT',
+  'GROUPS_UPDATE',
+  'GROUP_PARTICIPANTS_UPDATE',
+  'PRESENCE_UPDATE',
+  'CHATS_UPSERT',
+  'CHATS_UPDATE',
+  'CHATS_DELETE',
+  'CALL',
+  'QRCODE_UPDATED',
+  'TYPEBOT_START',
+  'TYPEBOT_CHANGE_STATUS',
+  'LABELS_EDIT',
+  'LABELS_ASSOCIATION',
+] as const
+
+/** Human-friendly labels for event types */
+const EVENT_LABELS: Record<string, string> = {
+  MESSAGES_UPSERT: '💬 Message received',
+  MESSAGES_UPDATE: '✏️ Message updated',
+  MESSAGES_DELETE: '🗑️ Message deleted',
+  SEND_MESSAGE: '📤 Message sent',
+  CONNECTION_UPDATE: '🔗 Connection status',
+  CONTACTS_UPDATE: '📇 Contact updated',
+  CONTACTS_UPSERT: '📇 Contact added/updated',
+  GROUPS_UPSERT: '👥 Group created/updated',
+  GROUPS_UPDATE: '👥 Group updated',
+  GROUP_PARTICIPANTS_UPDATE: '👤 Group member change',
+  PRESENCE_UPDATE: '🟢 Presence (online/offline)',
+  CHATS_UPSERT: '💬 Chat created/updated',
+  CHATS_UPDATE: '💬 Chat updated',
+  CHATS_DELETE: '🗑️ Chat deleted',
+  CALL: '📞 Call',
+  QRCODE_UPDATED: '📱 QR code updated',
+  TYPEBOT_START: '🤖 Typebot started',
+  TYPEBOT_CHANGE_STATUS: '🤖 Typebot status change',
+  LABELS_EDIT: '🏷️ Label edited',
+  LABELS_ASSOCIATION: '🏷️ Label associated',
+}
+
+type TextMatchMode = 'contains' | 'starts_with' | 'regex'
+
 interface ValidationError {
   path: string
   message: string
@@ -30,10 +80,13 @@ rules:
     priority: 100
     stop_on_match: true
     match:
+      events:
+        - MESSAGES_UPSERT
       chat:
         type: direct  # direct, group, or any
       text:
-        contains:
+        mode: contains
+        patterns:
           - "goodnight"
           - "welterusten"
     actions:
@@ -346,65 +399,168 @@ function GuidedBuilder({
     stop_on_match: true,
     cooldown_seconds: 0,
     match: {
+      events: ['MESSAGES_UPSERT'] as string[],
       chat: { type: 'any' as const, ids: [] as string[] },
-      sender: { ids: [] as string[] },
-      text: { contains: [] as string[], starts_with: '', regex: '' },
+      sender: { ids: [] as string[], numbers: [] as string[] },
+      text: { mode: 'contains' as TextMatchMode, patterns: [] as string[] },
     },
     actions: [] as any[],
   })
-  const [containsInput, setContainsInput] = useState('')
+  const [patternInput, setPatternInput] = useState('')
+  const [senderIdInput, setSenderIdInput] = useState('')
+  const [senderInput, setSenderInput] = useState('')
   const [preview, setPreview] = useState('')
+  const [chatSearch, setChatSearch] = useState('')
+  const [eventSearch, setEventSearch] = useState('')
+  const [serviceDetails, setServiceDetails] = useState<Record<number, any>>({})
 
-  // Update preview
+  // Auto-generate ID from name
+  const generateId = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+  }
+
+  // Update preview — clean up empty fields so the YAML stays readable
   useEffect(() => {
-    const cleanRule: any = { ...rule }
-    // Clean up empty arrays/strings
+    const cleanRule: any = JSON.parse(JSON.stringify(rule))
+    // events
+    if (!cleanRule.match?.events?.length) delete cleanRule.match.events
+    // chat
     if (cleanRule.match?.chat?.ids?.length === 0) delete cleanRule.match.chat.ids
-    if (cleanRule.match?.sender?.ids?.length === 0) delete cleanRule.match.sender
-    if (cleanRule.match?.text?.contains?.length === 0) delete cleanRule.match.text.contains
-    if (!cleanRule.match?.text?.starts_with) delete cleanRule.match?.text?.starts_with
-    if (!cleanRule.match?.text?.regex) delete cleanRule.match?.text?.regex
-    if (Object.keys(cleanRule.match?.text || {}).length === 0) delete cleanRule.match?.text
+    if (cleanRule.match?.chat?.type === 'any' && !cleanRule.match?.chat?.ids) delete cleanRule.match.chat
+    // sender
+    if (!cleanRule.match?.sender?.ids?.length) delete cleanRule.match?.sender?.ids
+    if (!cleanRule.match?.sender?.numbers?.length) delete cleanRule.match?.sender?.numbers
+    if (cleanRule.match?.sender && !cleanRule.match.sender.ids && !cleanRule.match.sender.numbers) delete cleanRule.match.sender
+    // text
+    if (!cleanRule.match?.text?.patterns?.length) delete cleanRule.match.text
+    // empty match
+    if (cleanRule.match && Object.keys(cleanRule.match).length === 0) delete cleanRule.match
     if (!cleanRule.cooldown_seconds) delete cleanRule.cooldown_seconds
-
     setPreview(yaml.dump(cleanRule, { indent: 2 }))
   }, [rule])
 
-  const addContains = () => {
-    if (containsInput.trim()) {
+  // --- helpers ---
+  const addPattern = () => {
+    if (patternInput.trim()) {
       setRule({
         ...rule,
         match: {
           ...rule.match,
           text: {
-            ...rule.match?.text,
-            contains: [...(rule.match?.text?.contains || []), containsInput.trim()],
+            ...rule.match.text,
+            patterns: [...rule.match.text.patterns, patternInput.trim()],
           },
         },
       })
-      setContainsInput('')
+      setPatternInput('')
     }
   }
 
-  const removeContains = (index: number) => {
+  const removePattern = (index: number) => {
     setRule({
       ...rule,
       match: {
         ...rule.match,
         text: {
-          ...rule.match?.text,
-          contains: (rule.match?.text?.contains || []).filter((_, i) => i !== index),
+          ...rule.match.text,
+          patterns: rule.match.text.patterns.filter((_, i) => i !== index),
         },
       },
     })
   }
 
-  const addAction = (type: 'ha_service' | 'reply_whatsapp') => {
-    if (type === 'ha_service') {
+  const addSenderId = () => {
+    const val = senderIdInput.trim()
+    if (val) {
       setRule({
         ...rule,
-        actions: [...rule.actions, { type, service: 'script.turn_on', target: { entity_id: '' } }],
+        match: {
+          ...rule.match,
+          sender: {
+            ...rule.match.sender,
+            ids: [...rule.match.sender.ids, val],
+          },
+        },
       })
+      setSenderIdInput('')
+    }
+  }
+
+  const removeSenderId = (index: number) => {
+    setRule({
+      ...rule,
+      match: {
+        ...rule.match,
+        sender: {
+          ...rule.match.sender,
+          ids: rule.match.sender.ids.filter((_, i) => i !== index),
+        },
+      },
+    })
+  }
+
+  const addSenderNumber = () => {
+    const cleaned = senderInput.trim().replace(/[^0-9+]/g, '')
+    if (cleaned) {
+      setRule({
+        ...rule,
+        match: {
+          ...rule.match,
+          sender: {
+            ...rule.match.sender,
+            numbers: [...rule.match.sender.numbers, cleaned],
+          },
+        },
+      })
+      setSenderInput('')
+    }
+  }
+
+  const removeSenderNumber = (index: number) => {
+    setRule({
+      ...rule,
+      match: {
+        ...rule.match,
+        sender: {
+          ...rule.match.sender,
+          numbers: rule.match.sender.numbers.filter((_, i) => i !== index),
+        },
+      },
+    })
+  }
+
+  const toggleEvent = (eventType: string) => {
+    const current = rule.match.events
+    const updated = current.includes(eventType)
+      ? current.filter((e) => e !== eventType)
+      : [...current, eventType]
+    setRule({
+      ...rule,
+      match: { ...rule.match, events: updated },
+    })
+  }
+
+  const loadServiceDetails = async (index: number, service: string) => {
+    try {
+      const details = await haApi.getServiceDetails(service)
+      setServiceDetails(prev => ({ ...prev, [index]: details }))
+    } catch (e) {
+      console.error('Failed to load service details:', e)
+      setServiceDetails(prev => ({ ...prev, [index]: null }))
+    }
+  }
+
+  const addAction = (type: 'ha_service' | 'reply_whatsapp') => {
+    if (type === 'ha_service') {
+      const newAction = { type, service: 'script.turn_on', target: { entity_id: '' }, data: {} }
+      setRule({
+        ...rule,
+        actions: [...rule.actions, newAction],
+      })
+      loadServiceDetails(rule.actions.length, 'script.turn_on')
     } else {
       setRule({
         ...rule,
@@ -418,6 +574,9 @@ function GuidedBuilder({
       ...rule,
       actions: rule.actions.map((a, i) => (i === index ? { ...a, ...updates } : a)),
     })
+    if (updates.service && rule.actions[index]?.type === 'ha_service') {
+      loadServiceDetails(index, updates.service)
+    }
   }
 
   const removeAction = (index: number) => {
@@ -426,56 +585,61 @@ function GuidedBuilder({
 
   const handleAdd = () => {
     if (!rule.id || !rule.name || rule.actions.length === 0) {
-      alert('Please fill in rule ID, name, and at least one action')
+      alert('Please fill in rule name and at least one action')
       return
     }
     onAddRule(rule)
   }
 
+  // Determine if text matching section is relevant
+  const hasTextEvents = rule.match.events.some((e) =>
+    ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE'].includes(e)
+  )
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Form */}
       <div className="space-y-4">
+        {/* Basic Info */}
         <div className="card">
           <h3 className="font-medium text-mushroom-text mb-3">Basic Info</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Rule ID *</label>
-              <input
-                type="text"
-                value={rule.id}
-                onChange={(e) => setRule({ ...rule, id: e.target.value.replace(/\s/g, '_') })}
-                className="input"
-                placeholder="e.g., goodnight_routine"
-              />
-            </div>
+          <div className="space-y-3">
             <div>
               <label className="label">Rule Name *</label>
               <input
                 type="text"
                 value={rule.name}
-                onChange={(e) => setRule({ ...rule, name: e.target.value })}
+                onChange={(e) => {
+                  const name = e.target.value
+                  const id = generateId(name)
+                  setRule({ ...rule, name, id })
+                }}
                 className="input"
                 placeholder="e.g., Goodnight Routine"
               />
+              <p className="text-xs text-mushroom-text-muted mt-1">
+                ID: {rule.id || '(auto-generated)'}
+              </p>
             </div>
-            <div>
-              <label className="label">Priority</label>
-              <input
-                type="number"
-                value={rule.priority}
-                onChange={(e) => setRule({ ...rule, priority: parseInt(e.target.value) || 100 })}
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="label">Cooldown (seconds)</label>
-              <input
-                type="number"
-                value={rule.cooldown_seconds}
-                onChange={(e) => setRule({ ...rule, cooldown_seconds: parseInt(e.target.value) || 0 })}
-                className="input"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Priority</label>
+                <input
+                  type="number"
+                  value={rule.priority}
+                  onChange={(e) => setRule({ ...rule, priority: parseInt(e.target.value) || 100 })}
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="label">Cooldown (seconds)</label>
+                <input
+                  type="number"
+                  value={rule.cooldown_seconds}
+                  onChange={(e) => setRule({ ...rule, cooldown_seconds: parseInt(e.target.value) || 0 })}
+                  className="input"
+                />
+              </div>
             </div>
           </div>
           <div className="flex items-center space-x-4 mt-3">
@@ -500,9 +664,55 @@ function GuidedBuilder({
           </div>
         </div>
 
+        {/* Event Selection */}
         <div className="card">
-          <h3 className="font-medium text-mushroom-text mb-3">Match Conditions</h3>
-          <div className="space-y-3">
+          <h3 className="font-medium text-mushroom-text mb-3">📡 Trigger Events</h3>
+          <p className="text-xs text-mushroom-text-muted mb-2">
+            Select which Evolution API events trigger this rule. Default: Message received.
+          </p>
+          <input
+            type="text"
+            value={eventSearch}
+            onChange={(e) => setEventSearch(e.target.value)}
+            className="input mb-2"
+            placeholder="Search events..."
+          />
+          <div className="max-h-56 overflow-y-auto space-y-0.5 bg-mushroom-bg rounded-mushroom p-2">
+            {EVOLUTION_EVENTS
+              .filter((ev) =>
+                ev.toLowerCase().includes(eventSearch.toLowerCase()) ||
+                (EVENT_LABELS[ev] || '').toLowerCase().includes(eventSearch.toLowerCase())
+              )
+              .map((ev) => (
+                <label
+                  key={ev}
+                  className="flex items-center space-x-2 px-2 py-1.5 hover:bg-mushroom-card rounded cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={rule.match.events.includes(ev)}
+                    onChange={() => toggleEvent(ev)}
+                    className="rounded border-mushroom-border"
+                  />
+                  <span className="text-sm text-mushroom-text">
+                    {EVENT_LABELS[ev] || ev}
+                  </span>
+                  <span className="text-xs text-mushroom-text-muted ml-auto font-mono">{ev}</span>
+                </label>
+              ))}
+          </div>
+          {rule.match.events.length > 0 && (
+            <p className="text-xs text-mushroom-text-muted mt-2">
+              {rule.match.events.length} event(s) selected
+            </p>
+          )}
+        </div>
+
+        {/* Match Conditions */}
+        <div className="card">
+          <h3 className="font-medium text-mushroom-text mb-3">🎯 Match Conditions</h3>
+          <div className="space-y-4">
+            {/* Chat type */}
             <div>
               <label className="label">Chat Type</label>
               <select
@@ -518,54 +728,182 @@ function GuidedBuilder({
                 <option value="group">Groups</option>
               </select>
             </div>
+
+            {/* Specific Chats */}
             <div>
-              <label className="label">Specific Chat (optional)</label>
-              <select
-                value={rule.match.chat?.ids?.[0] || ''}
-                onChange={(e) => setRule({
-                  ...rule,
-                  match: { ...rule.match, chat: { ...rule.match.chat, ids: e.target.value ? [e.target.value] : [] } }
-                })}
-                className="input"
-              >
-                <option value="">Any chat</option>
-                {chats.map((chat) => (
-                  <option key={chat.chat_id} value={chat.chat_id}>
-                    {chat.name}
-                  </option>
-                ))}
-              </select>
+              <label className="label">Specific Chats (optional)</label>
+              <input
+                type="text"
+                value={chatSearch}
+                onChange={(e) => setChatSearch(e.target.value)}
+                className="input mb-2"
+                placeholder="Search chats..."
+              />
+              <div className="max-h-48 overflow-y-auto space-y-1 bg-mushroom-bg rounded-mushroom p-2">
+                {chats
+                  .filter(chat => 
+                    chat.name.toLowerCase().includes(chatSearch.toLowerCase()) ||
+                    chat.chat_id.toLowerCase().includes(chatSearch.toLowerCase())
+                  )
+                  .map(chat => (
+                    <label key={chat.chat_id} className="flex items-center space-x-2 p-2 hover:bg-mushroom-card rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={rule.match.chat.ids.includes(chat.chat_id)}
+                        onChange={(e) => {
+                          const ids = e.target.checked
+                            ? [...rule.match.chat.ids, chat.chat_id]
+                            : rule.match.chat.ids.filter(id => id !== chat.chat_id)
+                          setRule({
+                            ...rule,
+                            match: {
+                              ...rule.match,
+                              chat: { ...rule.match.chat, ids },
+                            },
+                          })
+                        }}
+                        className="rounded border-mushroom-border"
+                      />
+                      <span className="text-sm text-mushroom-text">
+                        {chat.type === 'group' ? '👥' : '👤'} {chat.name}
+                      </span>
+                    </label>
+                  ))}
+              </div>
+              {rule.match.chat.ids.length > 0 && (
+                <p className="text-xs text-mushroom-text-muted mt-2">
+                  {rule.match.chat.ids.length} chat(s) selected
+                </p>
+              )}
             </div>
+
+            {/* Sender filters */}
             <div>
-              <label className="label">Text Contains</label>
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={containsInput}
-                  onChange={(e) => setContainsInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addContains()}
-                  className="input flex-1"
-                  placeholder="Type keyword and press Enter"
-                />
-                <button onClick={addContains} className="btn btn-secondary">Add</button>
+              <label className="label">Sender / Contact Filters (optional)</label>
+              <p className="text-xs text-mushroom-text-muted mb-2">
+                Filter by exact chat IDs (JIDs) and/or phone numbers. Both are AND — if you specify both, both must match. Leave empty for all senders.
+              </p>
+
+              {/* Sender IDs (exact JID) */}
+              <div className="mb-3">
+                <label className="label text-xs">Chat / Sender IDs (exact JID match)</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={senderIdInput}
+                    onChange={(e) => setSenderIdInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addSenderId()}
+                    className="input flex-1"
+                    placeholder="e.g., 31612345678@s.whatsapp.net"
+                  />
+                  <button onClick={addSenderId} className="btn btn-secondary">Add</button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {rule.match.sender.ids.map((id, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200 rounded-full text-sm"
+                    >
+                      🆔 {id}
+                      <button onClick={() => removeSenderId(i)} className="ml-1 hover:text-danger-text">×</button>
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {(rule.match.text?.contains || []).map((kw, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center px-2 py-1 bg-whatsapp-muted text-whatsapp rounded-full text-sm"
-                  >
-                    {kw}
-                    <button onClick={() => removeContains(i)} className="ml-1 hover:text-danger-text">×</button>
-                  </span>
-                ))}
+
+              {/* Sender Phone Numbers */}
+              <div>
+                <label className="label text-xs">Phone Numbers (flexible match, auto-extracts from JID)</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={senderInput}
+                    onChange={(e) => setSenderInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addSenderNumber()}
+                    className="input flex-1"
+                    placeholder="e.g., 31612345678"
+                  />
+                  <button onClick={addSenderNumber} className="btn btn-secondary">Add</button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {rule.match.sender.numbers.map((num, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200 rounded-full text-sm"
+                    >
+                      📱 {num}
+                      <button onClick={() => removeSenderNumber(i)} className="ml-1 hover:text-danger-text">×</button>
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
+
+            {/* Text filter */}
+            {hasTextEvents && (
+              <div>
+                <label className="label">Text Filter (optional)</label>
+                <div className="space-y-2">
+                  <div>
+                    <label className="label text-xs">Match Mode</label>
+                    <select
+                      value={rule.match.text.mode}
+                      onChange={(e) => setRule({
+                        ...rule,
+                        match: {
+                          ...rule.match,
+                          text: { ...rule.match.text, mode: e.target.value as TextMatchMode },
+                        },
+                      })}
+                      className="input"
+                    >
+                      <option value="contains">Contains (normalised, case-insensitive)</option>
+                      <option value="starts_with">Starts with (normalised, case-insensitive)</option>
+                      <option value="regex">Regex (advanced)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label text-xs">
+                      Patterns
+                      {rule.match.text.mode === 'contains' && (
+                        <span className="text-mushroom-text-muted ml-1">(matched after lowercasing &amp; trimming)</span>
+                      )}
+                      {rule.match.text.mode === 'regex' && (
+                        <span className="text-mushroom-text-muted ml-1">(JavaScript regex syntax)</span>
+                      )}
+                    </label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={patternInput}
+                        onChange={(e) => setPatternInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && addPattern()}
+                        className="input flex-1"
+                        placeholder={rule.match.text.mode === 'regex' ? 'e.g., ^hello\\b' : 'e.g., goodnight'}
+                      />
+                      <button onClick={addPattern} className="btn btn-secondary">Add</button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {rule.match.text.patterns.map((p, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center px-2 py-1 bg-whatsapp-muted text-whatsapp rounded-full text-sm"
+                        >
+                          {rule.match.text.mode === 'regex' ? `/${p}/` : p}
+                          <button onClick={() => removePattern(i)} className="ml-1 hover:text-danger-text">×</button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
+        {/* Actions */}
         <div className="card">
-          <h3 className="font-medium text-mushroom-text mb-3">Actions *</h3>
+          <h3 className="font-medium text-mushroom-text mb-3">⚡ Actions *</h3>
           <div className="space-y-3">
             {rule.actions.map((action, i) => (
               <div key={i} className="p-3 bg-mushroom-bg-secondary rounded-mushroom">
@@ -579,18 +917,57 @@ function GuidedBuilder({
                 </div>
                 {action.type === 'ha_service' ? (
                   <div className="space-y-2">
-                    <select
-                      value={action.target?.entity_id || ''}
-                      onChange={(e) => updateAction(i, { target: { entity_id: e.target.value } })}
-                      className="input"
-                    >
-                      <option value="">Select a script...</option>
-                      {scripts.map((s) => (
-                        <option key={s.entity_id} value={s.entity_id}>
-                          {s.name || s.entity_id}
-                        </option>
-                      ))}
-                    </select>
+                    <div>
+                      <label className="label text-xs">Service</label>
+                      <input
+                        type="text"
+                        value={action.service || ''}
+                        onChange={(e) => updateAction(i, { service: e.target.value })}
+                        className="input"
+                        placeholder="e.g., script.turn_on"
+                      />
+                    </div>
+                    <div>
+                      <label className="label text-xs">Target</label>
+                      <select
+                        value={action.target?.entity_id || ''}
+                        onChange={(e) => updateAction(i, { target: { entity_id: e.target.value } })}
+                        className="input"
+                      >
+                        <option value="">Select entity...</option>
+                        {scripts.map((s) => (
+                          <option key={s.entity_id} value={s.entity_id}>
+                            {s.name || s.entity_id}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {serviceDetails[i] && Object.keys(serviceDetails[i].fields || {}).length > 0 && (
+                      <div>
+                        <label className="label text-xs">Parameters</label>
+                        <div className="space-y-2 bg-mushroom-bg p-2 rounded">
+                          {Object.entries(serviceDetails[i].fields).map(([fieldName, field]: [string, any]) => (
+                            <div key={fieldName}>
+                              <label className="text-xs text-mushroom-text-secondary">
+                                {fieldName} {field.required && <span className="text-danger-text">*</span>}
+                              </label>
+                              {field.description && (
+                                <p className="text-xs text-mushroom-text-muted mb-1">{field.description}</p>
+                              )}
+                              <input
+                                type="text"
+                                value={action.data?.[fieldName] || ''}
+                                onChange={(e) => updateAction(i, { 
+                                  data: { ...action.data, [fieldName]: e.target.value } 
+                                })}
+                                className="input text-sm"
+                                placeholder={field.example ? String(field.example) : ''}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <input
@@ -605,7 +982,7 @@ function GuidedBuilder({
             ))}
             <div className="flex space-x-2">
               <button onClick={() => addAction('ha_service')} className="btn btn-secondary flex-1">
-                + Call HA Script
+                + Call HA Service
               </button>
               <button onClick={() => addAction('reply_whatsapp')} className="btn btn-secondary flex-1">
                 + WhatsApp Reply

@@ -65,6 +65,7 @@ export function createLogsRoutes(db: DatabasePool): Router {
           f.id,
           f.rule_id,
           f.rule_name,
+          f.event_type,
           f.message_id,
           f.chat_id,
           f.sender_id,
@@ -95,6 +96,7 @@ export function createLogsRoutes(db: DatabasePool): Router {
           id: f.id,
           rule_id: f.rule_id,
           rule_name: f.rule_name,
+          event_type: f.event_type || 'MESSAGES_UPSERT',
           message_id: f.message_id,
           chat_id: f.chat_id,
           action_type: firstAction.type || 'unknown',
@@ -108,6 +110,64 @@ export function createLogsRoutes(db: DatabasePool): Router {
       res.json(result);
     } catch (e: any) {
       console.error('[Logs] Error fetching rule fires:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  /**
+   * GET /api/logs/events
+   * Get Evolution API event log with pagination and optional filters
+   */
+  router.get('/events', async (req, res) => {
+    try {
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const offset = (page - 1) * limit;
+      const eventType = req.query.event_type as string;
+      const chatId = req.query.chat_id as string;
+
+      let query = `
+        SELECT id, event_type, instance_name, chat_id, sender_id, summary, received_at
+        FROM wa_event_log
+      `;
+      const conditions: string[] = [];
+      const params: any[] = [];
+
+      if (eventType) {
+        conditions.push('event_type = ?');
+        params.push(eventType);
+      }
+      if (chatId) {
+        conditions.push('chat_id = ?');
+        params.push(chatId);
+      }
+
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+
+      query += ' ORDER BY received_at DESC LIMIT ? OFFSET ?';
+      params.push(limit, offset);
+
+      const events = await db.getAll<any>(query, params);
+
+      // Also get total count for pagination
+      let countQuery = 'SELECT COUNT(*) as total FROM wa_event_log';
+      const countParams: any[] = [];
+      if (conditions.length > 0) {
+        countQuery += ' WHERE ' + conditions.join(' AND ');
+        countParams.push(...params.slice(0, params.length - 2)); // exclude limit/offset
+      }
+      const countResult = await db.getOne<{ total: number }>(countQuery, countParams);
+
+      res.json({
+        events,
+        total: countResult?.total || 0,
+        page,
+        limit,
+      });
+    } catch (e: any) {
+      console.error('[Logs] Error fetching events:', e.message);
       res.status(500).json({ error: e.message });
     }
   });

@@ -386,11 +386,28 @@ configure_instance() {
                 -d "{
                     \"enabled\": true,
                     \"url\": \"http://localhost:8099/webhook/evolution\",
-                    \"webhookByEvents\": true,
+                    \"webhookByEvents\": false,
                     \"events\": [
                         \"MESSAGES_UPSERT\",
+                        \"MESSAGES_UPDATE\",
+                        \"MESSAGES_DELETE\",
+                        \"SEND_MESSAGE\",
                         \"CONNECTION_UPDATE\",
-                        \"QRCODE_UPDATED\"
+                        \"CONTACTS_UPDATE\",
+                        \"CONTACTS_UPSERT\",
+                        \"GROUPS_UPSERT\",
+                        \"GROUPS_UPDATE\",
+                        \"GROUP_PARTICIPANTS_UPDATE\",
+                        \"PRESENCE_UPDATE\",
+                        \"CHATS_UPSERT\",
+                        \"CHATS_UPDATE\",
+                        \"CHATS_DELETE\",
+                        \"CALL\",
+                        \"QRCODE_UPDATED\",
+                        \"TYPEBOT_START\",
+                        \"TYPEBOT_CHANGE_STATUS\",
+                        \"LABELS_EDIT\",
+                        \"LABELS_ASSOCIATION\"
                     ]
                 }" > /dev/null
             

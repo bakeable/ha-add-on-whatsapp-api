@@ -19,6 +19,22 @@ export interface ServiceCallResult {
   error?: string;
 }
 
+export interface ServiceField {
+  name: string;
+  description?: string;
+  required?: boolean;
+  example?: any;
+  selector?: any;
+  default?: any;
+}
+
+export interface ServiceDetails {
+  domain: string;
+  service: string;
+  description?: string;
+  fields: Record<string, ServiceField>;
+}
+
 export class HAClient {
   private restClient: AxiosInstance;
   private wsUrl: string;
@@ -131,6 +147,41 @@ export class HAClient {
     }
   }
   
+  /**
+   * Get service details including parameters/fields
+   */
+  async getServiceDetails(service: string): Promise<ServiceDetails | null> {
+    try {
+      const [domain, serviceName] = service.split('.');
+      if (!domain || !serviceName) {
+        return null;
+      }
+
+      const response = await this.restClient.get('/api/services');
+      const services = response.data || [];
+      
+      const domainServices = services.find((s: any) => Object.keys(s)[0] === domain);
+      if (!domainServices) {
+        return null;
+      }
+      
+      const serviceData = domainServices[domain]?.[serviceName];
+      if (!serviceData) {
+        return null;
+      }
+
+      return {
+        domain,
+        service: serviceName,
+        description: serviceData.description,
+        fields: serviceData.fields || {},
+      };
+    } catch (error: any) {
+      console.error('[HAClient] Failed to get service details:', error.message);
+      return null;
+    }
+  }
+
   /**
    * Check connection to Home Assistant
    */

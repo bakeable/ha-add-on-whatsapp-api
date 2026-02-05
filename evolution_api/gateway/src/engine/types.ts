@@ -1,21 +1,59 @@
 /**
  * YAML Rule Schema and Types
- * Defines the structure of automation rules
+ * Defines the structure of automation rules with Evolution API event support
  */
 
+// All Evolution API event types that can trigger rules
+export const EVOLUTION_EVENTS = [
+  'MESSAGES_UPSERT',
+  'MESSAGES_UPDATE',
+  'MESSAGES_DELETE',
+  'SEND_MESSAGE',
+  'CONNECTION_UPDATE',
+  'CONTACTS_UPDATE',
+  'CONTACTS_UPSERT',
+  'GROUPS_UPSERT',
+  'GROUPS_UPDATE',
+  'GROUP_PARTICIPANTS_UPDATE',
+  'PRESENCE_UPDATE',
+  'CHATS_UPSERT',
+  'CHATS_UPDATE',
+  'CHATS_DELETE',
+  'CALL',
+  'QRCODE_UPDATED',
+  'TYPEBOT_START',
+  'TYPEBOT_CHANGE_STATUS',
+  'LABELS_EDIT',
+  'LABELS_ASSOCIATION',
+] as const;
+
+export type EvolutionEventType = typeof EVOLUTION_EVENTS[number];
+
+/** Text matching modes */
+export type TextMatchMode = 'contains' | 'starts_with' | 'regex';
+
+export interface TextFilter {
+  /** The matching mode */
+  mode: TextMatchMode;
+  /** The pattern(s) to match against */
+  patterns: string[];
+}
+
 export interface RuleMatch {
+  /** Evolution API events that trigger this rule (default: ['MESSAGES_UPSERT']) */
+  events?: EvolutionEventType[];
   chat?: {
     type?: 'direct' | 'group' | 'any';
+    /** Filter by specific chat IDs (WhatsApp JIDs) */
     ids?: string[];
   };
   sender?: {
+    /** Filter by exact sender JIDs (e.g., 31612345678@s.whatsapp.net) */
     ids?: string[];
+    /** Filter by sender phone numbers (auto-extracted, e.g., 31612345678) */
+    numbers?: string[];
   };
-  text?: {
-    contains?: string[];
-    starts_with?: string;
-    regex?: string;
-  };
+  text?: TextFilter;
 }
 
 export interface RuleAction {
@@ -72,6 +110,31 @@ export interface TestResult {
   }>;
 }
 
+/** Result returned by processMessage for live test execution */
+export interface ExecutionResult {
+  /** Rules that were evaluated */
+  evaluatedRules: Array<{
+    id: string;
+    name: string;
+    matched: boolean;
+    reason: string;
+    skippedCooldown?: boolean;
+    stoppedChain?: boolean;
+  }>;
+  /** Actions that were actually executed */
+  executedActions: Array<{
+    ruleId: string;
+    ruleName: string;
+    type: string;
+    details: string;
+    success: boolean;
+    error?: string;
+    durationMs: number;
+  }>;
+  /** Verbose log lines generated during execution */
+  logs: string[];
+}
+
 // JSON Schema for rule validation
 export const RULE_SCHEMA = {
   type: 'object',
@@ -93,6 +156,10 @@ export const RULE_SCHEMA = {
           match: {
             type: 'object',
             properties: {
+              events: {
+                type: 'array',
+                items: { type: 'string', enum: [...EVOLUTION_EVENTS] },
+              },
               chat: {
                 type: 'object',
                 properties: {
@@ -104,14 +171,15 @@ export const RULE_SCHEMA = {
                 type: 'object',
                 properties: {
                   ids: { type: 'array', items: { type: 'string' } },
+                  numbers: { type: 'array', items: { type: 'string' } },
                 },
               },
               text: {
                 type: 'object',
+                required: ['mode', 'patterns'],
                 properties: {
-                  contains: { type: 'array', items: { type: 'string' } },
-                  starts_with: { type: 'string' },
-                  regex: { type: 'string' },
+                  mode: { type: 'string', enum: ['contains', 'starts_with', 'regex'] },
+                  patterns: { type: 'array', items: { type: 'string' }, minItems: 1 },
                 },
               },
             },
