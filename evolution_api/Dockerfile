@@ -43,8 +43,8 @@ RUN npm ci && npm run build
 # Move UI build to gateway public folder
 RUN mkdir -p /gateway/public && mv /gateway/ui/dist/* /gateway/public/
 
-# Go back to root
-WORKDIR /
+# Set working directory for Evolution API
+WORKDIR /evolution
 
 # Copy run script
 COPY run.sh /run.sh
@@ -60,5 +60,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
 # Expose ports (8080 for Evolution API, 8099 for Gateway)
 EXPOSE 8080 8099
 
-# Start using run script
-CMD ["/run.sh"]
+# Override the base image's entrypoint and start using our run script
+ENTRYPOINT []
+CMD ["/bin/bash", "/run.sh"]

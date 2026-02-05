@@ -201,8 +201,7 @@ log_info "Sync full history: ${SYNC_FULL_HISTORY}"
 
 log_info "Configuration complete, starting Evolution API..."
 
-# Change to the Evolution API directory
-cd /evolution
+# We're already in /evolution directory (set in Dockerfile)
 
 # Run database migrations based on provider
 log_info "Running database migrations..."
@@ -302,7 +301,6 @@ fi
 cd /gateway
 node dist/server.js &
 GATEWAY_PID=$!
-cd /evolution
 
 # Configure instance in background
 (configure_instance) &
