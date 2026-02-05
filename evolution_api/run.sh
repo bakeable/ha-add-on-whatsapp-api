@@ -31,7 +31,7 @@ fi
 echo "[DEBUG] IN_HA=${IN_HA}"
 
 log_info() {
-    if [ "$IN_HA" = true ]; then
+    if [ "$IN_HA" = true ] && command -v bashio::log.info &> /dev/null; then
         bashio::log.info "$1"
     else
         echo "[INFO] $1"
@@ -39,7 +39,7 @@ log_info() {
 }
 
 log_warning() {
-    if [ "$IN_HA" = true ]; then
+    if [ "$IN_HA" = true ] && command -v bashio::log.warning &> /dev/null; then
         bashio::log.warning "$1"
     else
         echo "[WARN] $1"
@@ -47,7 +47,7 @@ log_warning() {
 }
 
 log_error() {
-    if [ "$IN_HA" = true ]; then
+    if [ "$IN_HA" = true ] && command -v bashio::log.error &> /dev/null; then
         bashio::log.error "$1"
     else
         echo "[ERROR] $1"

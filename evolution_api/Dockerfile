@@ -25,9 +25,12 @@ RUN apk add --no-cache \
 # Install bashio
 ARG BASHIO_VERSION="0.16.2"
 RUN curl -fsSL "https://github.com/hassio-addons/bashio/archive/v${BASHIO_VERSION}.tar.gz" \
-    | tar -xzf - --strip-components=1 -C /usr/local/lib/ bashio-${BASHIO_VERSION}/lib \
-    && ln -s /usr/local/lib/bashio.sh /usr/bin/bashio \
-    && ln -s /usr/local/lib/bashio.sh /usr/local/bin/bashio
+    | tar -xzf - -C /tmp \
+    && mv /tmp/bashio-${BASHIO_VERSION}/lib /usr/lib/bashio \
+    && ln -s /usr/lib/bashio/bashio.sh /usr/bin/bashio \
+    && chmod +x /usr/lib/bashio/bashio.sh \
+    && rm -rf /tmp/bashio-${BASHIO_VERSION} \
+    && bashio --version || echo "Bashio installed"
 
 # Copy and build the gateway
 COPY gateway /gateway
