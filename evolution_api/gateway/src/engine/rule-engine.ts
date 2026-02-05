@@ -357,11 +357,13 @@ export class RuleEngine {
             error: result.error,
           });
         } else if (action.type === 'reply_whatsapp' && action.text) {
-          await this.evolutionClient.sendTextMessage(
+          console.log(`[RuleEngine] Sending WhatsApp reply to ${message.chatId}: "${action.text}"`);
+          const sendResult = await this.evolutionClient.sendTextMessage(
             this.config.instanceName,
             message.chatId,
             action.text
           );
+          console.log(`[RuleEngine] WhatsApp reply sent successfully:`, sendResult);
           results.push({ type: 'reply_whatsapp', success: true });
         }
       } catch (e: any) {

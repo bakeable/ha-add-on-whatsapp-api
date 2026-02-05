@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { waApi } from "../api";
 
 interface Chat {
@@ -26,6 +27,7 @@ interface SyncProgress {
 }
 
 export default function ChatsPage() {
+  const navigate = useNavigate();
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -375,12 +377,12 @@ export default function ChatsPage() {
                       : "-"}
                   </td>
                   <td className="px-4 py-3">
-                    <a
-                      href={`/rules?chat=${encodeURIComponent(chat.chat_id)}`}
-                      className="text-primary hover:text-primary-hover text-sm"
+                    <button
+                      onClick={() => navigate(`/rules?chat=${encodeURIComponent(chat.chat_id)}`)}
+                      className="text-primary hover:text-primary-hover text-sm hover:underline"
                     >
                       Create Rule →
-                    </a>
+                    </button>
                   </td>
                 </tr>
               ))

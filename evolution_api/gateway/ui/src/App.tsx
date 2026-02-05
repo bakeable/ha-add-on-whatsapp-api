@@ -1,11 +1,25 @@
-import { NavLink, Route, Routes } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import ChatsPage from "./pages/Chats";
 import LogsPage from "./pages/Logs";
 import RulesPage from "./pages/Rules";
 import SetupPage from "./pages/Setup";
 import TestPage from "./pages/Test";
+import { waApi } from "./api";
 
 function App() {
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const location = useLocation();
+
+  // Check connection status on mount
+  useEffect(() => {
+    waApi.getStatus().then((status) => {
+      setIsConnected(status.state === 'open');
+    }).catch(() => {
+      setIsConnected(false);
+    });
+  }, []);
+
   const tabs = [
     { path: "/", label: "Setup", icon: "⚙️" },
     { path: "/chats", label: "Chats", icon: "💬" },
@@ -59,7 +73,15 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
         <Routes>
-          <Route path="/" element={<SetupPage />} />
+          <Route path="/" element={
+            isConnected === null ? (
+              <div className="text-center text-mushroom-text-muted py-8">Loading...</div>
+            ) : isConnected && location.pathname === "/" ? (
+              <Navigate to="/chats" replace />
+            ) : (
+              <SetupPage />
+            )
+          } />
           <Route path="/chats" element={<ChatsPage />} />
           <Route path="/rules" element={<RulesPage />} />
           <Route path="/test" element={<TestPage />} />
