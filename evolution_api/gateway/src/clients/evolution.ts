@@ -22,6 +22,7 @@ export interface Chat {
   id: string;
   type: 'group' | 'direct';
   name: string;
+  phoneNumber?: string; // Clean phone number for direct chats
   lastMessageAt?: string;
   unreadCount?: number;
 }
@@ -154,7 +155,13 @@ export class EvolutionClient {
       console.log(`[Evolution] fetchAllGroups returned ${groups.length} groups`);
       
       if (groups.length > 0) {
-        return groups.map((group: any) => ({
+        // Filter to only include actual groups (id ends with @g.us)
+        const actualGroups = groups.filter((g: any) => 
+          (g.id || '').endsWith('@g.us')
+        );
+        console.log(`[Evolution] Filtered to ${actualGroups.length} actual groups`);
+        
+        return actualGroups.map((group: any) => ({
           id: group.id,
           type: 'group' as const,
           name: group.subject || group.name || 'Unknown Group',
@@ -210,12 +217,29 @@ export class EvolutionClient {
       console.log(`[Evolution] findContacts returned ${contacts.length} contacts`);
       
       if (contacts.length > 0) {
-        return contacts.map((contact: any) => ({
-          id: contact.id || contact.remoteJid,
-          type: 'direct' as const,
-          name: contact.pushName || contact.name || contact.id?.split('@')[0] || 'Unknown',
-          lastMessageAt: undefined,
-        }));
+        // Filter to only include actual contacts (not groups)
+        const actualContacts = contacts.filter((c: any) => {
+          const id = c.id || c.remoteJid || '';
+          return !id.endsWith('@g.us') && !id.endsWith('@broadcast');
+        });
+        console.log(`[Evolution] Filtered to ${actualContacts.length} actual contacts`);
+        
+        return actualContacts.map((contact: any) => {
+          const id = contact.id || contact.remoteJid || '';
+          const phoneNumber = id.split('@')[0];
+          // Prefer full name, then pushName, then phone number
+          const name = contact.name || contact.pushName || contact.verifiedName || phoneNumber || 'Unknown';
+          
+          return {
+            id,
+            type: 'direct' as const,
+            name,
+            phoneNumber,
+            lastMessageAt: contact.lastMsgTimestamp 
+              ? new Date(contact.lastMsgTimestamp * 1000).toISOString() 
+              : undefined,
+          };
+        });
       }
     } catch (error: any) {
       console.warn('[Evolution] findContacts failed:', error.message);
@@ -238,12 +262,22 @@ export class EvolutionClient {
       
       console.log(`[Evolution] Found ${contacts.length} contacts from findChats`);
       
-      return contacts.map((contact: any) => ({
-        id: contact.id || contact.remoteJid,
-        type: 'direct' as const,
-        name: contact.name || contact.pushName || (contact.id || contact.remoteJid)?.split('@')[0] || 'Unknown',
-        lastMessageAt: contact.lastMsgTimestamp ? new Date(contact.lastMsgTimestamp * 1000).toISOString() : undefined,
-      }));
+      return contacts.map((contact: any) => {
+        const id = contact.id || contact.remoteJid || '';
+        const phoneNumber = id.split('@')[0];
+        // Prefer full name, then pushName, then phone number
+        const name = contact.name || contact.pushName || contact.verifiedName || phoneNumber || 'Unknown';
+        
+        return {
+          id,
+          type: 'direct' as const,
+          name,
+          phoneNumber,
+          lastMessageAt: contact.lastMsgTimestamp 
+            ? new Date(contact.lastMsgTimestamp * 1000).toISOString() 
+            : undefined,
+        };
+      });
     } catch (error: any) {
       console.warn('[Evolution] findChats for contacts failed:', error.message);
     }

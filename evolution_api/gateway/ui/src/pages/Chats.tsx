@@ -53,8 +53,8 @@ export default function ChatsPage() {
   // Debug Evolution API endpoints
   const runDebug = async () => {
     try {
-      setDebugInfo({ status: 'loading...' });
-      const response = await fetch('/api/wa/debug/endpoints');
+      setDebugInfo({ status: "loading..." });
+      const response = await fetch("/api/wa/debug/endpoints");
       const data = await response.json();
       setDebugInfo(data);
     } catch (e: any) {
@@ -183,7 +183,9 @@ export default function ChatsPage() {
       {showDebug && (
         <div className="card bg-gray-50">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-medium text-gray-900">🔧 Evolution API Debug</h3>
+            <h3 className="font-medium text-gray-900">
+              🔧 Evolution API Debug
+            </h3>
             <button
               onClick={runDebug}
               className="text-sm text-blue-600 hover:text-blue-800"

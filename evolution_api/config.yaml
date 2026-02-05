@@ -2,7 +2,7 @@
 # https://github.com/bakeable/ha-add-on-whatsapp-api
 
 name: WhatsApp Gateway
-version: "2.3.7"
+version: "1.0.0"
 slug: whatsapp_gateway
 description: >-
   Send and receive WhatsApp messages from Home Assistant. Provides a notify
